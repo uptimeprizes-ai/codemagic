@@ -1,28 +1,29 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var selectedTab = 0
-    
+
+    @ObservedObject var alarmEngine: AlarmEngine
+    @ObservedObject var audioManager: AudioPlayerManager
+    @ObservedObject var stageCoordinator: StageCoordinator
+    @ObservedObject var storeKit: StoreKitManager
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            PlayerView()
+        TabView {
+            PlayerView(alarmEngine: alarmEngine, audioManager: audioManager)
                 .tabItem {
                     Label("Player", systemImage: "music.note")
                 }
-                .tag(0)
-            
-            DiscoverView()
+
+            DiscoverView(storeKit: storeKit)
                 .tabItem {
                     Label("Discover", systemImage: "sparkles")
                 }
-                .tag(1)
-            
-            SettingsView()
+
+            SettingsView(alarmEngine: alarmEngine)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
-                .tag(2)
         }
-        .tint(DesignTokens.brass)
+        .tint(Color("brass"))
     }
 }

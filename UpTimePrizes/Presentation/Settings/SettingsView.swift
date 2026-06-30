@@ -2,131 +2,94 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+
+    // MARK: - Environment
+
+    @Environment(\.modelContext) private var context
     @Query private var journeys: [JourneyEntity]
-    @Query private var demoState: [DemoStateEntity]
-    
-    private var activeJourney: JourneyEntity? {
-        journeys.first(where: { $0.isActive })
-    }
-    
+    @Query private var demoStates: [DemoStateEntity]
+
+    // MARK: - Observed
+
+    @ObservedObject var alarmEngine: AlarmEngine
+
+    // MARK: - State
+
+    @State private var showDebug: Bool = false
+
+    // MARK: - Computed
+
+    private var demoState: DemoStateEntity? { demoStates.first }
+    private var activeJourney: JourneyEntity? { journeys.first(where: { $0.isActive }) }
+
+    // MARK: - Body
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Active Journey Card
-                    ActiveJourneyCard(journey: activeJourney)
-                    
-                    // Progress Card
-                    if let state = demoState.first {
-                        ProgressCard(demoState: state)
+            List {
+                // Active journey section
+                Section("Active Journey") {
+                    if let journey = activeJourney {
+                        LabeledContent(journey.title, value: journey.purchaseState.replacingOccurrences(of: "_", with: " ").capitalized)
+                        LabeledContent("Progress", value: "Day \(journey.completedDays) of \(journey.totalDays)")
+                    } else {
+                        Text("No active journey")
+                            .foregroundColor(Color("ink").opacity(0.5))
                     }
-                    
-                    // About Card
-                    AboutCard()
-                    
-                    #if DEBUG
-                    NavigationLink("Debug Tools") {
-                        DebugView()
-                    }
-                    .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                    .foregroundColor(DesignTokens.brass)
-                    #endif
                 }
-                .padding()
+
+                // Genesis section
+                Section("The Genesis") {
+                    LabeledContent("Mornings completed", value: "\(demoState?.completedDays ?? 0) of 9")
+                    LabeledContent("Discover unlocked", value: (demoState?.completedDays ?? 0) >= 9 ? "Yes" : "No")
+                }
+
+                // All journeys
+                Section("All Journeys") {
+                    ForEach(journeys, id: \.id) { journey in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(journey.title)
+                                    .font(.custom("PlayfairDisplay-SemiBold", size: 14))
+                                if journey.isActive {
+                                    Text("Active")
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 2)
+                                        .background(Color("brass").opacity(0.15))
+                                        .foregroundColor(Color("brass"))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            Text("Day \(journey.completedDays)/\(journey.totalDays) · \(journey.purchaseState)")
+                                .font(.caption)
+                                .foregroundColor(Color("ink").opacity(0.5))
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                // Links
+                Section("About") {
+                    Link("Privacy Policy", destination: URL(string: "https://uptimeprizes.com/privacy")!)
+                    Link("Support", destination: URL(string: "https://uptimeprizes.com/support")!)
+                }
+
+                // Debug (only in DEBUG builds)
+                #if DEBUG
+                Section("Developer") {
+                    Button("Open Debug Tools") {
+                        showDebug = true
+                    }
+                    .foregroundColor(Color("brass"))
+                }
+                #endif
             }
-            .background(DesignTokens.paper)
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
         }
-    }
-}
-
-struct ActiveJourneyCard: View {
-    let journey: JourneyEntity?
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ACTIVE JOURNEY")
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 12))
-                .foregroundColor(DesignTokens.brass)
-                .tracking(2)
-            
-            Text(journey?.title ?? "None")
-                .font(.custom(DesignTokens.Typography.playfairDisplaySemiBold, size: 20))
-                .foregroundColor(DesignTokens.ink)
-            
-            if let journey = journey {
-                Text("Day \(journey.currentDay) of \(journey.totalDays)")
-                    .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                    .foregroundColor(DesignTokens.ink.opacity(0.7))
-            }
+        .sheet(isPresented: $showDebug) {
+            DebugView(alarmEngine: alarmEngine)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.6))
-                .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
-        )
-    }
-}
-
-struct ProgressCard: View {
-    let demoState: DemoStateEntity
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("GENESIS PROGRESS")
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 12))
-                .foregroundColor(DesignTokens.brass)
-                .tracking(2)
-            
-            Text("\(demoState.completedDays) of 9 mornings completed")
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                .foregroundColor(DesignTokens.ink)
-            
-            ProgressView(value: Double(demoState.completedDays), total: 9)
-                .tint(DesignTokens.brass)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.6))
-                .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
-        )
-    }
-}
-
-struct AboutCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ABOUT")
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 12))
-                .foregroundColor(DesignTokens.brass)
-                .tracking(2)
-            
-            Text("UpTime Prizes")
-                .font(.custom(DesignTokens.Typography.playfairDisplaySemiBold, size: 16))
-                .foregroundColor(DesignTokens.ink)
-            
-            Text("Version 1.0.0")
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                .foregroundColor(DesignTokens.ink.opacity(0.7))
-            
-            Link("Privacy Policy", destination: URL(string: "https://uptimeprizes.com/privacy")!)
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                .foregroundColor(DesignTokens.brass)
-            
-            Link("Support", destination: URL(string: "https://uptimeprizes.com/support")!)
-                .font(.custom(DesignTokens.Typography.playfairDisplay, size: 14))
-                .foregroundColor(DesignTokens.brass)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.6))
-                .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
-        )
     }
 }

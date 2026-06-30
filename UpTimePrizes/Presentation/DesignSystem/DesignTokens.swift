@@ -1,39 +1,40 @@
 import SwiftUI
 
-struct DesignTokens {
-    static let brass = Color(hex: "B5985A")
-    static let paper = Color(hex: "F4F1EA")
-    static let ink = Color(hex: "2B1E12")
-    
-    struct Typography {
-        static let playfairDisplay = "PlayfairDisplay-Regular"
-        static let playfairDisplaySemiBold = "PlayfairDisplay-SemiBold"
+// MARK: - Design Tokens
+
+/// Central design system for UpTime Prizes.
+/// Colors are defined in Assets.xcassets as named colors AND as SwiftUI Color extensions.
+/// Typography uses Playfair Display (Regular and SemiBold).
+
+// MARK: - Color tokens (SwiftUI extensions)
+
+extension Color {
+    /// Accent color — buttons, highlights, active states (#B5985A)
+    static let brass = Color("brass")
+    /// Background color — warm off-white (#F4F1EA)
+    static let paper = Color("paper")
+    /// Text color — deep warm brown (#2B1E12)
+    static let ink = Color("ink")
+}
+
+// MARK: - Typography tokens
+
+extension Font {
+    static func playfair(size: CGFloat) -> Font {
+        .custom("PlayfairDisplay-Regular", size: size)
+    }
+
+    static func playfairSemiBold(size: CGFloat) -> Font {
+        .custom("PlayfairDisplay-SemiBold", size: size)
     }
 }
 
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
+// MARK: - Color asset values (for reference / UIKit usage)
 
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+struct DesignTokens {
+    struct Colors {
+        static let brass = UIColor(red: 0.710, green: 0.596, blue: 0.353, alpha: 1.0)
+        static let paper = UIColor(red: 0.957, green: 0.945, blue: 0.918, alpha: 1.0)
+        static let ink   = UIColor(red: 0.169, green: 0.118, blue: 0.071, alpha: 1.0)
     }
 }
