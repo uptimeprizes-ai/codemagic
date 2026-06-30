@@ -13,7 +13,7 @@ workflows:
         XCODE_WORKSPACE: "UpTimePrizes.xcodeproj/project.xcworkspace"
         XCODE_SCHEME: "UpTimePrizes"
         APP_STORE_APPLE_ID: "com.uptimeprizes.app"
-      xcode: 15.4
+      xcode: 16.2
     scripts:
       - name: Install XcodeGen
         script: |
