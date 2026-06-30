@@ -1,9 +1,10 @@
 name: UpTimePrizes
+
 options:
   bundleIdPrefix: com.uptimeprizes
   deploymentTarget:
     iOS: "17.0"
-  xcodeVersion: "15.4"
+  xcodeVersion: "16.2"
   createIntermediateGroups: true
 
 settings:
@@ -47,10 +48,6 @@ targets:
           SWIFT_COMPILATION_MODE: wholemodule
           SWIFT_OPTIMIZATION_LEVEL: "-O"
           DEBUG_INFORMATION_FORMAT: "dwarf-with-dsym"
-    entitlements:
-      path: UpTimePrizes/UpTimePrizes.entitlements
-      properties:
-        com.apple.developer.in-app-payments: []
     info:
       path: UpTimePrizes/Info.plist
       properties:
