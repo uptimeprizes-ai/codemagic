@@ -1,0 +1,39 @@
+workflows:
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.uptimeprizes.app
+      vars:
+        XCODE_WORKSPACE: "UpTimePrizes.xcodeproj/project.xcworkspace"
+        XCODE_SCHEME: "UpTimePrizes"
+        APP_STORE_APPLE_ID: "com.uptimeprizes.app"
+      xcode: 15.4
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "UpTimePrizes.xcodeproj/project.xcworkspace" \
+            --scheme "UpTimePrizes"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

@@ -1,0 +1,29 @@
+# Xcode
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+DerivedData/
+build/
+
+# Swift Package Manager
+.build/
+Packages/
+
+# CocoaPods (not used but just in case)
+Pods/
+
+# macOS
+.DS_Store
+*.swp
+*~.nib
+
+# Codemagic
+/tmp/

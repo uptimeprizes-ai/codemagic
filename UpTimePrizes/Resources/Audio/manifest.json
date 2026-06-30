@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "libraries": {
+    "demo": {
+      "title": "The Genesis",
+      "songs": [
+        {
+          "id": "demo-01",
+          "title": "Bright Side Swing",
+          "filename": "bright_side_swing",
+          "dayNumber": 1,
+          "regions": {
+            "stage1": { "startMs": 0, "endMs": 30000 },
+            "stage2": { "startMs": 30000, "endMs": 60000 },
+            "stage3": { "startMs": 60000, "endMs": -1 }
+          }
+        },
+        {
+          "id": "demo-02",
+          "title": "No Permission",
+          "filename": "no_permission",
+          "dayNumber": 2,
+          "regions": {
+            "stage1": { "startMs": 0, "endMs": 30000 },
+            "stage2": { "startMs": 30000, "endMs": 60000 },
+            "stage3": { "startMs": 60000, "endMs": -1 }
+          }
+        },
+        {
+          "id": "demo-03",
+          "title": "The UpTime Swing",
+          "filename": "the_uptime_swing",
+          "dayNumber": 3,
+          "regions": {
+            "stage1": { "startMs": 0, "endMs": 30000 },
+            "stage2": { "startMs": 30000, "endMs": 60000 },
+            "stage3": { "startMs": 60000, "endMs": -1 }
+          }
+        },
+        {
+          "id": "demo-04",
+          "title": "UpTime Go Go",
+          "filename": "uptime_go_go",
+          "dayNumber": 4,
+          "regions": {
+            "stage1": { "startMs": 0, "endMs": 30000 },
+            "stage2": { "startMs": 30000, "endMs": 60000 },
+            "stage3": { "startMs": 60000, "endMs": -1 }
+          }
+        },
+        {
+          "id": "demo-05",
+          "title": "Wake Up",
+          "filename": "wake_up",
+          "dayNumber": 5,
+          "regions": {
+            "stage1": { "startMs": 0, "endMs": 30000 },
+            "stage2": { "startMs": 30000, "endMs": 60000 },
+            "stage3": { "startMs": 60000, "endMs": -1 }
+          }
+        }
+      ]
+    }
+  }
+}
