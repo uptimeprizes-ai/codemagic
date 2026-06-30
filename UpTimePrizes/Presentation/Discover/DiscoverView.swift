@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+import StoreKit
+
 struct DiscoverView: View {
     @Query private var demoState: [DemoStateEntity]
     @StateObject private var storeKit = StoreKitManager()
