@@ -18,6 +18,15 @@ workflows:
       - name: Install XcodeGen
         script: |
           brew install xcodegen
+      - name: Set build number
+        script: |
+          # Use Codemagic's BUILD_NUMBER (auto-increments each build) offset by 100
+          # so we stay well above any previously uploaded version
+          BUILD_NUM=$((BUILD_NUMBER + 100))
+          echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUM"
+          # Patch project.yml before XcodeGen runs
+          sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: $BUILD_NUM/" project.yml
+          cat project.yml | grep CURRENT_PROJECT_VERSION
       - name: Generate Xcode project
         script: |
           xcodegen generate
@@ -37,4 +46,3 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
-
