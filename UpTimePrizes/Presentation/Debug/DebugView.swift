@@ -27,8 +27,8 @@ struct DebugView: View {
                     if let demo = demoStates.first {
                         LabeledContent("completedDays", value: "\(demo.completedDays)")
                         LabeledContent("currentDay", value: "\(demo.currentDay)")
-                        LabeledContent("isPurchaseOffered", value: "\(demo.isPurchaseOffered)")
-                        LabeledContent("isActive", value: "\(demo.isActive)")
+                        LabeledContent("isPurchaseOffered", value: String(demo.isPurchaseOffered))
+                        LabeledContent("isActive", value: String(demo.isActive))
                     }
                 }
 
@@ -42,7 +42,7 @@ struct DebugView: View {
                                 .font(.caption)
                             Text("days: \(journey.completedDays)/\(journey.totalDays) · currentDay: \(journey.currentDay)")
                                 .font(.caption)
-                            Text("isActive: \(journey.isActive ? \"true\" : \"false\")")
+                            Text("isActive: " + String(journey.isActive))
                                 .font(.caption)
                         }
                         .padding(.vertical, 2)
@@ -53,7 +53,7 @@ struct DebugView: View {
                 Section("Alarm") {
                     if let alarm = alarms.first {
                         LabeledContent("Time", value: String(format: "%02d:%02d", alarm.hour, alarm.minute))
-                        LabeledContent("Enabled", value: "\(alarm.isEnabled)")
+                        LabeledContent("Enabled", value: String(alarm.isEnabled))
                         LabeledContent("Repeat days", value: alarm.repeatDays.map { "\($0)" }.joined(separator: ", "))
                     }
                 }
