@@ -42,7 +42,7 @@ struct DebugView: View {
                                 .font(.caption)
                             Text("days: \(journey.completedDays)/\(journey.totalDays) · currentDay: \(journey.currentDay)")
                                 .font(.caption)
-                            Text("isActive: \(journey.isActive)")
+                            Text("isActive: \(journey.isActive ? \"true\" : \"false\")")
                                 .font(.caption)
                         }
                         .padding(.vertical, 2)
