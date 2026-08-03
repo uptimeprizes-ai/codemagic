@@ -1,7 +1,22 @@
 import Foundation
 import SwiftData
+import CryptoKit
 
+// MARK: - DatabaseSeeder
+
+/// Seeds the SwiftData database on first launch and on every launch where
+/// the bundled manifest has changed.
+///
+/// Bug 3 fix: Computes a SHA-256 fingerprint of the bundled manifest's song data.
+/// On every launch, compares the stored fingerprint against the current manifest.
+/// If they differ (e.g., after an app update with new region timestamps), all song
+/// entries are force-refreshed from the bundled manifest — even if they already exist.
+/// This prevents stale iCloud-restored region data from causing incorrect loop positions.
 struct DatabaseSeeder {
+
+    // MARK: - UserDefaults keys
+
+    private static let manifestFingerprintKey = "com.uptimeprizes.manifestFingerprint"
 
     // MARK: - Manifest Codable types
 
@@ -34,14 +49,14 @@ struct DatabaseSeeder {
         let endMs: Int
     }
 
-    // MARK: - Seed
+    // MARK: - Seed entry point
 
     @MainActor
     static func seed(context: ModelContext) {
         seedDemoState(context: context)
         seedAlarm(context: context)
         seedJourneys(context: context)
-        seedSongs(context: context)
+        seedSongsWithFingerprintCheck(context: context)
         try? context.save()
     }
 
@@ -125,13 +140,36 @@ struct DatabaseSeeder {
         context.insert(catalyst)
     }
 
-    @MainActor
-    private static func seedSongs(context: ModelContext) {
-        let fetchSongs = FetchDescriptor<SongEntity>()
-        guard (try? context.fetchCount(fetchSongs)) == 0 else { return }
+    // MARK: - Bug 3 fix: Manifest fingerprint-gated song seeding
 
-        // Seed demo songs from manifest.json
-        if let manifest = loadManifest() {
+    @MainActor
+    private static func seedSongsWithFingerprintCheck(context: ModelContext) {
+        guard let manifestData = loadManifestData(),
+              let manifest = try? JSONDecoder().decode(Manifest.self, from: manifestData) else {
+            return
+        }
+
+        // Compute SHA-256 fingerprint of the manifest's song data
+        let currentFingerprint = sha256(manifestData)
+        let storedFingerprint = UserDefaults.standard.string(forKey: manifestFingerprintKey) ?? ""
+
+        let fetchSongs = FetchDescriptor<SongEntity>()
+        let songCount = (try? context.fetchCount(fetchSongs)) ?? 0
+        let manifestChanged = currentFingerprint != storedFingerprint
+
+        if songCount == 0 || manifestChanged {
+            if manifestChanged && songCount > 0 {
+                print("[DatabaseSeeder] Manifest fingerprint changed — force-refreshing song region data.")
+                // Delete all existing demo songs so they get re-seeded with fresh region data
+                let fetchDemoSongs = FetchDescriptor<SongEntity>(
+                    predicate: #Predicate { $0.libraryId == "demo" }
+                )
+                if let existing = try? context.fetch(fetchDemoSongs) {
+                    for song in existing { context.delete(song) }
+                }
+            }
+
+            // Seed demo songs from manifest
             for (libraryId, library) in manifest.libraries {
                 for song in library.songs {
                     let entity = SongEntity(
@@ -145,34 +183,81 @@ struct DatabaseSeeder {
                     context.insert(entity)
                 }
             }
-        }
 
-        // Seed Catalyst Tracks (audio delivered after purchase)
-        let catalystSongs: [(id: String, title: String, day: Int, filename: String)] = [
-            ("special-day-01", "The Anniversary of You", 1, "the_anniversary_of_you"),
-            ("special-day-02", "The Vacation Kickoff", 2, "the_vacation_kickoff"),
-            ("special-day-03", "My Own Company", 3, "my_own_company"),
-            ("special-day-04", "Step Into The Room", 4, "step_into_the_room"),
-            ("special-day-05", "The Slate is Washed", 5, "the_slate_is_washed")
-        ]
-        for song in catalystSongs {
-            let entity = SongEntity(
-                id: song.id,
-                title: song.title,
-                libraryId: "special-day",
-                dayNumber: song.day,
-                filename: song.filename,
-                isAvailable: false // available after purchase + asset delivery
+            // Seed Catalyst Track stubs (only if not already present)
+            let catalystSongs: [(id: String, title: String, day: Int, filename: String)] = [
+                ("special-day-01", "The Anniversary of You", 1, "the_anniversary_of_you"),
+                ("special-day-02", "The Vacation Kickoff", 2, "the_vacation_kickoff"),
+                ("special-day-03", "My Own Company", 3, "my_own_company"),
+                ("special-day-04", "Step Into The Room", 4, "step_into_the_room"),
+                ("special-day-05", "The Slate is Washed", 5, "the_slate_is_washed")
+            ]
+            let fetchCatalyst = FetchDescriptor<SongEntity>(
+                predicate: #Predicate { $0.libraryId == "special-day" }
             )
-            context.insert(entity)
+            if (try? context.fetchCount(fetchCatalyst)) == 0 {
+                for song in catalystSongs {
+                    let entity = SongEntity(
+                        id: song.id,
+                        title: song.title,
+                        libraryId: "special-day",
+                        dayNumber: song.day,
+                        filename: song.filename,
+                        isAvailable: false
+                    )
+                    context.insert(entity)
+                }
+            }
+
+            // Store the new fingerprint
+            UserDefaults.standard.set(currentFingerprint, forKey: manifestFingerprintKey)
         }
     }
 
-    private static func loadManifest() -> Manifest? {
-        guard let url = Bundle.main.url(forResource: "manifest", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
+    // MARK: - Helpers
+
+    private static func loadManifestData() -> Data? {
+        guard let url = Bundle.main.url(forResource: "manifest", withExtension: "json") else {
             return nil
         }
-        return try? JSONDecoder().decode(Manifest.self, from: data)
+        return try? Data(contentsOf: url)
+    }
+
+    private static func sha256(_ data: Data) -> String {
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
+    }
+}
+
+// MARK: - iCloud Backup Exclusion
+
+/// Call this once on first launch to exclude the SwiftData store from iCloud backup.
+/// This prevents stale region data from being restored from an old backup.
+/// Must be called after the ModelContainer is created.
+struct BackupExclusion {
+    @MainActor
+    static func excludeSwiftDataStoreFromBackup() {
+        let fileManager = FileManager.default
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return
+        }
+
+        // SwiftData stores its database in Application Support
+        let storeDirectory = appSupport
+        do {
+            let contents = try fileManager.contentsOfDirectory(
+                at: storeDirectory,
+                includingPropertiesForKeys: nil
+            )
+            for url in contents where url.pathExtension == "store" || url.lastPathComponent.contains("default") {
+                var resourceValues = URLResourceValues()
+                resourceValues.isExcludedFromBackup = true
+                var mutableURL = url
+                try mutableURL.setResourceValues(resourceValues)
+                print("[BackupExclusion] Excluded from iCloud backup: \(url.lastPathComponent)")
+            }
+        } catch {
+            print("[BackupExclusion] Could not exclude store from backup: \(error)")
+        }
     }
 }

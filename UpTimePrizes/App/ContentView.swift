@@ -16,7 +16,6 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, Observab
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         if notification.request.content.userInfo["type"] as? String == "alarm" {
-            // Show alarm UI in-app instead of a banner
             DispatchQueue.main.async {
                 self.onAlarmFired?()
                 NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
@@ -48,6 +47,7 @@ struct ContentView: View {
     // MARK: - Environment
 
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - Observed
 
@@ -86,11 +86,19 @@ struct ContentView: View {
                 }
                 .onChange(of: showAlarm) { _, newValue in
                     if newValue {
-                        // Start alarm audio when alarm view appears
                         if let song = engine.currentSong(from: audioManager) {
-                            // Resolve subdirectory using the active journey ID
                             let sub = engine.subdirectory(for: song.id.hasPrefix("demo") ? "demo" : (song.id.hasPrefix("special") ? "special-day" : "library-a"))
                             stageCoordinator.startAlarm(song: song, subdirectory: sub, audioManager: audioManager)
+                        }
+                    }
+                }
+                // Bug 1 fix: Re-verify alarm scheduling every time the app becomes active.
+                // This catches cases where the OS cleared pending notifications (e.g., after
+                // an app update from TestFlight/App Store).
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        Task {
+                            await engine.verifyAndRescheduleIfNeeded()
                         }
                     }
                 }
@@ -110,7 +118,11 @@ struct ContentView: View {
 
     @MainActor
     private func setup() async {
-        // Seed database
+        // Bug 3 fix: Exclude SwiftData store from iCloud backup to prevent
+        // stale region data from being restored on device migration.
+        BackupExclusion.excludeSwiftDataStoreFromBackup()
+
+        // Seed database (with manifest fingerprint check for Bug 3)
         DatabaseSeeder.seed(context: context)
         isSeeded = true
 
@@ -118,10 +130,10 @@ struct ContentView: View {
         let engine = AlarmEngine(context: context)
         alarmEngine = engine
 
-        // Configure StoreKit with model context
+        // Configure StoreKit with model context (Bug 2 fix is inside applyEntitlement)
         storeKit.configure(context: context)
 
-        // Reschedule alarm from persisted state
+        // Bug 1 fix: Reschedule alarm from persisted state on first launch
         engine.rescheduleFromPersistedState()
 
         // Set up notification delegate

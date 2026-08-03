@@ -6,6 +6,10 @@ import SwiftData
 
 /// Manages alarm scheduling via UNUserNotificationCenter and handles
 /// day progression when the alarm is dismissed.
+///
+/// Defensive recovery principle (Bug 1 fix): On every app activation,
+/// verify the alarm is still scheduled. If the user has an enabled alarm
+/// but no pending notification exists, re-schedule immediately.
 @MainActor
 class AlarmEngine: ObservableObject {
 
@@ -50,7 +54,7 @@ class AlarmEngine: ObservableObject {
     ///   - repeatDays: Array of weekday integers (1 = Sunday … 7 = Saturday). Empty = daily.
     func scheduleAlarm(hour: Int, minute: Int, repeatDays: [Int]) {
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [Self.alarmNotificationIdentifier])
+        center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
 
         let content = UNMutableNotificationContent()
         content.title = "Good morning."
@@ -65,7 +69,7 @@ class AlarmEngine: ObservableObject {
             components.minute = minute
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
             let request = UNNotificationRequest(
-                identifier: Self.alarmNotificationIdentifier,
+                identifier: alarmNotificationIdentifier,
                 content: content,
                 trigger: trigger
             )
@@ -82,7 +86,7 @@ class AlarmEngine: ObservableObject {
                 components.minute = minute
                 components.weekday = weekday
                 let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-                let identifier = "\(Self.alarmNotificationIdentifier)_\(weekday)"
+                let identifier = "\(alarmNotificationIdentifier)_\(weekday)"
                 let request = UNNotificationRequest(
                     identifier: identifier,
                     content: content,
@@ -99,17 +103,31 @@ class AlarmEngine: ObservableObject {
 
     func cancelAlarm() {
         let center = UNUserNotificationCenter.current()
-        // Cancel base identifier + all weekday variants
-        var identifiers = [Self.alarmNotificationIdentifier]
-        for weekday in 1...7 {
-            identifiers.append("\(Self.alarmNotificationIdentifier)_\(weekday)")
-        }
-        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
     }
 
-    // MARK: - Reschedule from persisted state
+    // MARK: - Bug 1 Fix: Defensive re-arm on every app activation
 
-    /// Called on app launch to restore alarm scheduling from AlarmEntity.
+    /// Called on every app launch AND every time the app becomes active.
+    /// Verifies that a pending alarm notification exists for enabled alarms.
+    /// If the alarm is enabled but no notification is pending (e.g., wiped by
+    /// an app update or OS event), silently re-schedules it.
+    func verifyAndRescheduleIfNeeded() async {
+        let fetchAlarm = FetchDescriptor<AlarmEntity>()
+        guard let alarm = try? context.fetch(fetchAlarm).first, alarm.isEnabled else { return }
+
+        let center = UNUserNotificationCenter.current()
+        let pending = await center.pendingNotificationRequests()
+        let alarmIds = Set(allAlarmIdentifiers())
+        let hasScheduled = pending.contains { alarmIds.contains($0.identifier) }
+
+        if !hasScheduled {
+            print("[AlarmEngine] Alarm was enabled but no pending notification found — re-scheduling.")
+            scheduleAlarm(hour: alarm.hour, minute: alarm.minute, repeatDays: alarm.repeatDays)
+        }
+    }
+
+    /// Called on initial launch to restore alarm scheduling from AlarmEntity.
     func rescheduleFromPersistedState() {
         let fetchAlarm = FetchDescriptor<AlarmEntity>()
         guard let alarm = try? context.fetch(fetchAlarm).first, alarm.isEnabled else { return }
@@ -183,5 +201,17 @@ class AlarmEngine: ObservableObject {
         case "demo": return "demo"
         default: return nil // paid content downloaded to documents directory
         }
+    }
+
+    // MARK: - Private helpers
+
+    private var alarmNotificationIdentifier: String { Self.alarmNotificationIdentifier }
+
+    private func allAlarmIdentifiers() -> [String] {
+        var ids = [Self.alarmNotificationIdentifier]
+        for weekday in 1...7 {
+            ids.append("\(Self.alarmNotificationIdentifier)_\(weekday)")
+        }
+        return ids
     }
 }

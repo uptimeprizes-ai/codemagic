@@ -5,8 +5,11 @@ import SwiftData
 // MARK: - StoreKitManager
 
 /// Manages StoreKit 2 product fetching, purchasing, and entitlement persistence.
-/// After a successful purchase, updates the corresponding JourneyEntity's purchaseState
-/// and sets it as the active journey (deactivating all others).
+///
+/// Bug 2 fix: When a purchase is restored (e.g., after reinstall), applyEntitlement()
+/// now also updates DemoStateEntity so the Discovery tab unlocks correctly — not just
+/// the journey's purchaseState. This prevents the two state systems from getting out
+/// of sync.
 @MainActor
 class StoreKitManager: ObservableObject {
 
@@ -106,8 +109,12 @@ class StoreKitManager: ObservableObject {
 
     /// Updates the JourneyEntity matching this product ID.
     /// Sets purchaseState to ACTIVE_IN_PROGRESS and activates the journey.
-    /// Deactivates all other non-DEMO journeys.
+    /// Deactivates all other journeys.
     /// Catalyst Tracks (SPECIAL_DAY) are immediately UNLOCKED_FOR_PLAYBACK.
+    ///
+    /// Bug 2 fix: Also updates DemoStateEntity to unlock the Discovery tab
+    /// when any purchase is restored. This ensures the two state systems
+    /// (billing state and progression state) stay in sync on reinstall.
     private func applyEntitlement(productID: String) async {
         guard let journeyId = Self.productJourneyMap[productID],
               let context = context else { return }
@@ -134,15 +141,20 @@ class StoreKitManager: ObservableObject {
 
         purchased.purchaseState = newState
 
-        // Activate this journey, deactivate all others (preserve DEMO as background)
+        // Activate this journey, deactivate all others
         for journey in journeys {
-            if journey.id == journeyId {
-                journey.isActive = true
-            } else if journey.type != "DEMO" {
-                journey.isActive = false
-            } else {
-                // DEMO: deactivate since a paid journey is now active
-                journey.isActive = false
+            journey.isActive = journey.id == journeyId
+        }
+
+        // Bug 2 fix: Unlock the Discovery tab by advancing demo state past the gate.
+        // The Discover tab is gated on demoState.completedDays >= 9.
+        // When a purchase exists, the user has already earned access — unlock it.
+        let fetchDemo = FetchDescriptor<DemoStateEntity>()
+        if let demo = try? context.fetch(fetchDemo).first {
+            if demo.completedDays < 9 {
+                demo.completedDays = 9
+                demo.isPurchaseOffered = true
+                print("[StoreKitManager] Bug 2 fix: Advanced demo state to day 9 to unlock Discovery tab.")
             }
         }
 
