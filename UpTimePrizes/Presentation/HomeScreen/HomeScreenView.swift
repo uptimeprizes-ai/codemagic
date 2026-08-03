@@ -107,7 +107,7 @@ struct HomeScreenView: View {
                 Spacer().frame(height: 20)
 
                 // Active journey
-                if let journey = activeJourney {
+                if activeJourney != nil {
                     Text(journeyProgressText)
                         .font(.custom("PlayfairDisplay-Regular", size: 13))
                         .foregroundColor(Color("ink").opacity(0.5))

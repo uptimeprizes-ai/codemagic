@@ -77,13 +77,13 @@ struct ContentView: View {
                     AlarmView(
                         stageCoordinator: stageCoordinator,
                         audioManager: audioManager,
-                        onSnooze: {
-                            engine.snoozeAlarm()
+                        onDismiss: {
+                            engine.handleAlarmDismissed()
                             stageCoordinator.stopAlarm()
                             showAlarm = false
                         },
-                        onDismiss: {
-                            engine.handleAlarmDismissed()
+                        onSnooze: {
+                            engine.snoozeAlarm()
                             stageCoordinator.stopAlarm()
                             showAlarm = false
                         }

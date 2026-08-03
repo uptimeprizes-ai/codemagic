@@ -387,21 +387,3 @@ struct PlayerView: View {
 
 // MARK: - AudioPlayerManager convenience
 
-extension AudioPlayerManager {
-    func play(filename: String, subdirectory: String?) {
-        let url: URL?
-        if let sub = subdirectory {
-            url = Bundle.main.url(forResource: filename, withExtension: "m4a", subdirectory: sub)
-                ?? Bundle.main.url(forResource: filename, withExtension: "m4a")
-        } else {
-            url = Bundle.main.url(forResource: filename, withExtension: "m4a")
-        }
-        guard let url = url else { return }
-        do {
-            let p = try AVAudioPlayer(contentsOf: url)
-            p.play()
-        } catch {
-            print("[AudioPlayerManager] play(filename:subdirectory:) error: \(error)")
-        }
-    }
-}
