@@ -4,7 +4,7 @@ import SwiftData
 // MARK: - AlarmView
 
 /// Full-screen alarm view presented when the alarm sounds.
-/// Shows the current stage, song title, journey name, and a Dismiss button.
+/// Shows the current stage, song title, journey name, Snooze and Dismiss buttons.
 /// Stage auto-advances when Stage 1/2 regions end; Stage 3 shows Replay button.
 struct AlarmView: View {
 
@@ -21,6 +21,7 @@ struct AlarmView: View {
     // MARK: - Callbacks
 
     var onDismiss: () -> Void
+    var onSnooze: () -> Void
 
     // MARK: - Computed
 
@@ -71,6 +72,13 @@ struct AlarmView: View {
 
                 // Dismiss button
                 dismissButton
+
+                Spacer().frame(height: 16)
+
+                // Snooze button (only visible during Stage 1 and Stage 2)
+                if stageCoordinator.currentStage == .stage1 || stageCoordinator.currentStage == .stage2 {
+                    snoozeButton
+                }
 
                 Spacer().frame(height: 48)
             }
@@ -134,17 +142,18 @@ struct AlarmView: View {
                 .padding(.horizontal, 32)
         }
     }
-}
 
-// MARK: - Preview
+    // MARK: - Snooze button
 
-#Preview {
-    let coordinator = StageCoordinator()
-    let audio = AudioPlayerManager()
-    return AlarmView(
-        stageCoordinator: coordinator,
-        audioManager: audio,
-        onDismiss: {}
-    )
-    .modelContainer(for: [JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self], inMemory: true)
+    private var snoozeButton: some View {
+        Button {
+            onSnooze()
+        } label: {
+            Text("Snooze \(AlarmEngine.snoozeDurationMinutes) min")
+                .font(.custom("PlayfairDisplay-Regular", size: 15))
+                .foregroundColor(Color("ink").opacity(0.5))
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
 }

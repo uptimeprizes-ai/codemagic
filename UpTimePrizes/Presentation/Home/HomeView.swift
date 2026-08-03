@@ -9,9 +9,14 @@ struct HomeView: View {
 
     var body: some View {
         TabView {
+            HomeScreenView()
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+
             PlayerView(alarmEngine: alarmEngine, audioManager: audioManager)
                 .tabItem {
-                    Label("Player", systemImage: "music.note")
+                    Label("Alarm", systemImage: "alarm.fill")
                 }
 
             DiscoverView(storeKit: storeKit)

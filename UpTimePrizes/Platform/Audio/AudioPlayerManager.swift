@@ -1,7 +1,7 @@
 import Foundation
 import AVFoundation
 
-// MARK: - Manifest types (shared with DatabaseSeeder)
+// MARK: - Manifest types
 
 struct ManifestRegion: Codable {
     let startMs: Int
@@ -37,6 +37,10 @@ struct AudioManifest: Codable {
 /// Manages AVAudioPlayer for three-stage alarm playback.
 /// Stage 1 and Stage 2 loop within their defined regions.
 /// Stage 3 plays once through, then signals completion.
+///
+/// Audio session fix: Uses .playback category with NO mixing options so the
+/// audio overrides the iPhone silent switch. The session is re-activated
+/// immediately before each playback call to ensure it is active.
 @MainActor
 class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
@@ -59,18 +63,23 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     override init() {
         super.init()
         manifest = Self.loadManifest()
-        configureAudioSession()
+        // Configure audio session at init — will be re-activated before playback
+        activateAlarmAudioSession()
     }
 
     // MARK: - Audio Session
 
-    private func configureAudioSession() {
+    /// Configures and activates the AVAudioSession for alarm playback.
+    /// .playback category without .mixWithOthers overrides the silent switch.
+    /// Called at init AND immediately before every playback start.
+    private func activateAlarmAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try session.setActive(true)
+            // .playback without mixWithOthers = overrides silent switch
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            print("[AudioPlayerManager] Failed to configure AVAudioSession: \(error)")
+            print("[AudioPlayerManager] Failed to activate AVAudioSession: \(error)")
         }
     }
 
@@ -96,13 +105,6 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     // MARK: - Playback control
 
-    /// Play a specific stage region of a song file.
-    /// - Parameters:
-    ///   - filename: Audio filename without extension (e.g. "bright_side_swing")
-    ///   - subdirectory: Bundle subdirectory (e.g. "demo")
-    ///   - region: The time region to play (startMs / endMs)
-    ///   - loop: Whether to loop within the region
-    ///   - onFinished: Called when Stage 3 finishes playing (not called for looping stages)
     func playRegion(
         filename: String,
         subdirectory: String?,
@@ -111,6 +113,9 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         onFinished: (() -> Void)? = nil
     ) {
         stopAll()
+
+        // Re-activate audio session immediately before playback
+        activateAlarmAudioSession()
 
         guard let url = bundleURL(for: filename, subdirectory: subdirectory) else {
             print("[AudioPlayerManager] Audio file not found: \(filename)")
@@ -121,6 +126,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             player = try AVAudioPlayer(contentsOf: url)
             player?.delegate = self
             player?.prepareToPlay()
+            player?.volume = 1.0
 
             let startSec = Double(region.startMs) / 1000.0
             let endMs = region.endMs
@@ -133,7 +139,6 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 player?.play()
                 scheduleLoopTimer(region: region)
             } else {
-                // Stage 3: play once, stop at endMs if specified
                 isLooping = false
                 currentRegion = region
                 onStage3Finished = onFinished
@@ -146,7 +151,6 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
                         }
                     }
                 }
-                // If endMs == -1, play to natural end; delegate fires audioPlayerDidFinishPlaying
             }
 
             isPlaying = true
@@ -155,25 +159,21 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 
-    /// Convenience: play Stage 1 (The Invite) — loops
     func playStage1(filename: String, subdirectory: String?, region: ManifestRegion) {
         currentStageLabel = "Stage 1 — The Invite"
         playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
     }
 
-    /// Convenience: play Stage 2 (The Nudge) — loops
     func playStage2(filename: String, subdirectory: String?, region: ManifestRegion) {
         currentStageLabel = "Stage 2 — The Nudge"
         playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
     }
 
-    /// Convenience: play Stage 3 (The Prize) — plays once
     func playStage3(filename: String, subdirectory: String?, region: ManifestRegion, onFinished: @escaping () -> Void) {
         currentStageLabel = "Stage 3 — The Prize"
         playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: false, onFinished: onFinished)
     }
 
-    /// Replay Stage 3 from the beginning of its region (one additional listen)
     func replay(filename: String, subdirectory: String?, region: ManifestRegion, onFinished: @escaping () -> Void) {
         currentStageLabel = "Replay"
         playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: false, onFinished: onFinished)
@@ -224,7 +224,6 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            // Only fires for Stage 3 with endMs == -1 (play to end of file)
             if !self.isLooping {
                 self.handleStage3Finished()
             }
@@ -243,5 +242,26 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 ?? Bundle.main.url(forResource: filename, withExtension: "m4a")
         }
         return Bundle.main.url(forResource: filename, withExtension: "m4a")
+    }
+
+    // MARK: - Convenience play (for Player page preview)
+
+    func play(filename: String, subdirectory: String?) {
+        activateAlarmAudioSession()
+        let url: URL?
+        if let sub = subdirectory {
+            url = Bundle.main.url(forResource: filename, withExtension: "m4a", subdirectory: sub)
+                ?? Bundle.main.url(forResource: filename, withExtension: "m4a")
+        } else {
+            url = Bundle.main.url(forResource: filename, withExtension: "m4a")
+        }
+        guard let url = url else { return }
+        do {
+            let p = try AVAudioPlayer(contentsOf: url)
+            p.volume = 1.0
+            p.play()
+        } catch {
+            print("[AudioPlayerManager] play(filename:subdirectory:) error: \(error)")
+        }
     }
 }

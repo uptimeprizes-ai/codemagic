@@ -215,3 +215,40 @@ class AlarmEngine: ObservableObject {
         return ids
     }
 }
+
+// MARK: - Snooze extension
+
+extension AlarmEngine {
+
+    /// Default snooze duration in minutes
+    static let snoozeDurationMinutes: Int = 9
+
+    /// Snooze the alarm: stop audio, schedule a one-time notification
+    /// snoozeDurationMinutes from now, and dismiss the alarm UI.
+    func snoozeAlarm() {
+        let center = UNUserNotificationCenter.current()
+
+        let content = UNMutableNotificationContent()
+        content.title = "Good morning."
+        content.body = "Your morning experience is ready."
+        content.sound = UNNotificationSound.default
+        content.userInfo = ["type": "alarm"]
+
+        // Fire once after snooze duration
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: TimeInterval(Self.snoozeDurationMinutes * 60),
+            repeats: false
+        )
+        let snoozeId = "\(Self.alarmNotificationIdentifier).snooze"
+        center.removePendingNotificationRequests(withIdentifiers: [snoozeId])
+        let request = UNNotificationRequest(identifier: snoozeId, content: content, trigger: trigger)
+        center.add(request) { error in
+            if let error = error {
+                print("[AlarmEngine] Failed to schedule snooze: \(error)")
+            }
+        }
+
+        isAlarmActive = false
+        // Note: snooze does NOT increment completedDays — only Dismiss does
+    }
+}
