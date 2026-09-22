@@ -62,6 +62,31 @@ final class SongEntity {
     }
 }
 
+/// One row per counted morning. A morning exists here only if audio actually
+/// sounded — nothing played, nothing recorded. dayKey is unique, so a second
+/// alarm on the same calendar day can never count twice, and the Android bug
+/// of one session recording a morning twice cannot recur at the store level.
+@Model
+final class MorningRecordEntity {
+    @Attribute(.unique) var dayKey: String // device-local "yyyy-MM-dd"
+    var journeyId: String
+    var stageAtDismiss: String // "invite" | "nudge" | "prize" | "autoSilence"
+    var reachedPrize: Bool
+    var heldStreakOnly: Bool // Catalyst morning (later: Genesis fallback) — holds the streak, extends nothing
+    var advancedJourney: Bool
+    var recordedAt: Date
+
+    init(dayKey: String, journeyId: String, stageAtDismiss: String, reachedPrize: Bool, heldStreakOnly: Bool, advancedJourney: Bool, recordedAt: Date = Date()) {
+        self.dayKey = dayKey
+        self.journeyId = journeyId
+        self.stageAtDismiss = stageAtDismiss
+        self.reachedPrize = reachedPrize
+        self.heldStreakOnly = heldStreakOnly
+        self.advancedJourney = advancedJourney
+        self.recordedAt = recordedAt
+    }
+}
+
 @Model
 final class DemoStateEntity {
     @Attribute(.unique) var id: String = "demo_state"

@@ -159,13 +159,31 @@ final class JourneyProgressionTests: XCTestCase {
     var context: ModelContext!
     var alarmEngine: AlarmEngine!
 
+    /// Fixed date anchor; each counted morning advances one calendar day, so
+    /// the one-morning-per-day rule never collides inside a test.
+    private var testDay = Date(timeIntervalSince1970: 1_700_000_000)
+
     override func setUpWithError() throws {
-        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self])
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         container = try ModelContainer(for: schema, configurations: [config])
         context = ModelContext(container)
         seedFromFixture()
         alarmEngine = AlarmEngine(context: context)
+    }
+
+    /// A full counted morning: new session, sounded audio, next calendar day.
+    @discardableResult
+    private func dismissMorning(reachedPrize: Bool = true) -> AlarmEngine.MorningOutcome? {
+        alarmEngine.beginAlarmSession()
+        let outcome = alarmEngine.handleAlarmDismissed(
+            audioSounded: true,
+            stageAtDismiss: reachedPrize ? "prize" : "invite",
+            reachedPrize: reachedPrize,
+            date: testDay
+        )
+        testDay = Calendar.current.date(byAdding: .day, value: 1, to: testDay)!
+        return outcome
     }
 
     override func tearDownWithError() throws {
@@ -225,7 +243,7 @@ final class JourneyProgressionTests: XCTestCase {
     // MARK: Progression
 
     func testDismissIncrementsCountAndMovesMorningForward() throws {
-        alarmEngine.handleAlarmDismissed()
+        dismissMorning()
         let genesis = try context.fetch(
             FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "genesis" })
         ).first
@@ -234,19 +252,19 @@ final class JourneyProgressionTests: XCTestCase {
     }
 
     func testNineDismissalsUnlockDiscover() throws {
-        for _ in 0..<9 { alarmEngine.handleAlarmDismissed() }
+        for _ in 0..<9 { dismissMorning() }
         let demo = try context.fetch(FetchDescriptor<DemoStateEntity>()).first
         XCTAssertTrue(demo?.isPurchaseOffered ?? false)
     }
 
     func testCompletionSetsUnlockedStateAndIndexKeepsMoving() throws {
-        for _ in 0..<9 { alarmEngine.handleAlarmDismissed() }
+        for _ in 0..<9 { dismissMorning() }
         let genesis = try context.fetch(
             FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "genesis" })
         ).first
         XCTAssertEqual(genesis?.purchaseState, "UNLOCKED_FOR_PLAYBACK")
         // The morning number must keep moving after completion — never freeze.
-        alarmEngine.handleAlarmDismissed()
+        dismissMorning()
         XCTAssertEqual(genesis?.currentDay, 11)
     }
 
@@ -261,14 +279,14 @@ final class JourneyProgressionTests: XCTestCase {
         }
         try context.save()
 
-        alarmEngine.handleAlarmDismissed() // Genesis is active
+        dismissMorning() // Genesis is active
 
         let castPrelude = try context.fetch(fetch).first
         XCTAssertEqual(castPrelude?.completedDays, 5)
     }
 
     func testSwitchingJourneysPreservesProgress() throws {
-        for _ in 0..<3 { alarmEngine.handleAlarmDismissed() }
+        for _ in 0..<3 { dismissMorning() }
         let journeys = try context.fetch(FetchDescriptor<JourneyEntity>())
         for journey in journeys { journey.isActive = journey.id == "cast-prelude" }
         try context.save()
@@ -297,4 +315,206 @@ final class JourneyProgressionTests: XCTestCase {
         coordinator.advanceStage()
         XCTAssertEqual(coordinator.currentStage, .replay)
     }
+
+    // MARK: Counting rules (§2.4)
+
+    func testNothingSoundedNothingCounted() throws {
+        alarmEngine.beginAlarmSession()
+        let outcome = alarmEngine.handleAlarmDismissed(
+            audioSounded: false, stageAtDismiss: "invite", reachedPrize: false, date: testDay
+        )
+        XCTAssertNil(outcome, "No Prize screen without a counted morning")
+        let genesis = try context.fetch(
+            FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "genesis" })
+        ).first
+        XCTAssertEqual(genesis?.completedDays, 0)
+        XCTAssertEqual(MorningLedger(context: context).soundedMorningsCount(), 0)
+    }
+
+    func testSecondAlarmSameDayNeverCountsTwice() throws {
+        let day = testDay
+        alarmEngine.beginAlarmSession()
+        XCTAssertNotNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day
+        ))
+        alarmEngine.beginAlarmSession() // a new session, same calendar day
+        XCTAssertNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day
+        ))
+        let genesis = try context.fetch(
+            FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "genesis" })
+        ).first
+        XCTAssertEqual(genesis?.completedDays, 1)
+    }
+
+    func testOneRecordedMorningPerAlarmSession() throws {
+        alarmEngine.beginAlarmSession()
+        let day2 = Calendar.current.date(byAdding: .day, value: 1, to: testDay)!
+        XCTAssertNotNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: testDay
+        ))
+        // Same session, even on a new calendar day (midnight crossed): no second count.
+        XCTAssertNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day2
+        ))
+    }
+
+    func testCatalystMorningHoldsStreakAndAdvancesNoJourney() throws {
+        // Add the Catalyst journey and make it active.
+        context.insert(JourneyEntity(
+            id: "catalyst", title: "The Catalyst Tracks", descriptionText: "d",
+            framingLine: "f", totalDays: 5, sortOrder: 4, packName: "special_day",
+            productId: "com.uptime.prizes.special_day", entitlementId: "",
+            isPurchaseOffered: true, isActive: false,
+            purchaseState: "UNLOCKED_FOR_PLAYBACK", completedDays: 0, currentDay: 1
+        ))
+        let journeys = try context.fetch(FetchDescriptor<JourneyEntity>())
+        for j in journeys { j.isActive = j.id == "catalyst" }
+        try context.save()
+
+        let outcome = try XCTUnwrap(dismissMorning())
+        XCTAssertTrue(outcome.heldStreakOnly)
+        XCTAssertEqual(outcome.journeyTitle, "The Catalyst Tracks")
+
+        // No journey count moved anywhere.
+        for j in try context.fetch(FetchDescriptor<JourneyEntity>()) {
+            XCTAssertEqual(j.completedDays, 0)
+        }
+    }
+}
+
+// MARK: - Streak rules (§2.4)
+
+@MainActor
+final class StreakTests: XCTestCase {
+
+    var container: ModelContainer!
+    var context: ModelContext!
+    var ledger: MorningLedger!
+
+    private let anchor = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func day(_ offset: Int) -> Date {
+        Calendar.current.date(byAdding: .day, value: offset, to: anchor)!
+    }
+
+    override func setUpWithError() throws {
+        let schema = Schema([MorningRecordEntity.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        container = try ModelContainer(for: schema, configurations: [config])
+        context = ModelContext(container)
+        ledger = MorningLedger(context: context)
+    }
+
+    private func count(_ offset: Int, catalyst: Bool = false) {
+        ledger.record(
+            date: day(offset), journeyId: catalyst ? "catalyst" : "genesis",
+            stageAtDismiss: "prize", reachedPrize: true,
+            heldStreakOnly: catalyst, advancedJourney: !catalyst
+        )
+    }
+
+    func testConsecutiveMorningsCount() {
+        count(0); count(1); count(2)
+        XCTAssertEqual(ledger.streak(asOf: day(2)), 3)
+    }
+
+    func testStreakShowsZeroTheMomentItIsBroken() {
+        count(0); count(1)
+        // Last counted day is two days before "today" — not live, shows 0.
+        XCTAssertEqual(ledger.streak(asOf: day(3)), 0)
+    }
+
+    func testYesterdayKeepsTheRunLive() {
+        count(0); count(1)
+        XCTAssertEqual(ledger.streak(asOf: day(2)), 2)
+    }
+
+    func testCatalystMorningHoldsWithoutExtending() {
+        count(0)
+        count(1, catalyst: true)
+        count(2)
+        // Three counted days, but the Catalyst day adds nothing: streak is 2.
+        XCTAssertEqual(ledger.streak(asOf: day(2)), 2)
+    }
+
+    func testGapBreaksEvenWithCatalystEitherSide() {
+        count(0)
+        // day 1 has no morning at all
+        count(2, catalyst: true)
+        count(3)
+        // Walk back from day 3: counted day 3 (1), catalyst day 2 (holds),
+        // day 1 empty → stop. The day-0 morning is beyond the break.
+        XCTAssertEqual(ledger.streak(asOf: day(3)), 1)
+    }
+}
+
+// MARK: - Prize screen copy selection (§2.5, §2.9)
+
+final class PrizeCopyTests: XCTestCase {
+
+    private func outcome(
+        title: String = "The Genesis", morning: Int = 3, total: Int = 9,
+        complete: Bool = false, reachedPrize: Bool = false, heldOnly: Bool = false
+    ) -> AlarmEngine.MorningOutcome {
+        AlarmEngine.MorningOutcome(
+            journeyTitle: title, morningNumber: morning, totalDays: total,
+            journeyComplete: complete, reachedPrize: reachedPrize, heldStreakOnly: heldOnly
+        )
+    }
+
+    func testHeaderMorningXofY() {
+        XCTAssertEqual(outcome().prizeHeader, "The Genesis · Morning 3 of 9")
+    }
+
+    func testHeaderCompleteOnLastMorning() {
+        XCTAssertEqual(outcome(morning: 9, complete: true).prizeHeader, "The Genesis · Complete")
+    }
+
+    func testHeaderJourneyNameAloneForCatalyst() {
+        XCTAssertEqual(outcome(title: "The Catalyst Tracks", heldOnly: true).prizeHeader, "The Catalyst Tracks")
+    }
+
+    func testMessagePrizeReached() {
+        XCTAssertEqual(outcome(reachedPrize: true).prizeMessage, CuratorCopy.prizeMessagePrizeReached)
+    }
+
+    func testMessageDismissedEarly() {
+        XCTAssertEqual(outcome().prizeMessage, CuratorCopy.prizeMessageDismissedEarly)
+    }
+
+    func testMessageJourneyCompleteWinsOverPrize() {
+        XCTAssertEqual(outcome(complete: true, reachedPrize: true).prizeMessage, CuratorCopy.prizeMessageJourneyComplete)
+    }
+
+    func testMessageCatalystWinsOverEverything() {
+        XCTAssertEqual(outcome(complete: true, reachedPrize: true, heldOnly: true).prizeMessage, CuratorCopy.prizeMessageCatalystOrFallback)
+    }
+}
+
+// MARK: - Review prompt eligibility (§2.6)
+
+final class ReviewPromptTests: XCTestCase {
+
+    private func ask(
+        mornings: Int = 5, attempts: Int = 0, recent: Bool = true,
+        alarm: Bool = false, audio: Bool = false, missed: Bool = false
+    ) -> Bool {
+        ReviewPromptManager.shouldAsk(
+            soundedMornings: mornings, attemptsSoFar: attempts,
+            lastCountedMorningIsRecent: recent, alarmActive: alarm,
+            audioPlaying: audio, hasUnacknowledgedMissedAlarm: missed
+        )
+    }
+
+    func testAsksAfterFiveSoundedMornings() { XCTAssertTrue(ask()) }
+    func testNeverBeforeFiveMornings() { XCTAssertFalse(ask(mornings: 4)) }
+    func testAtMostThreeAttempts() {
+        XCTAssertTrue(ask(attempts: 2))
+        XCTAssertFalse(ask(attempts: 3))
+    }
+    func testOnlyWhenLastMorningIsRecent() { XCTAssertFalse(ask(recent: false)) }
+    func testNeverDuringAlarm() { XCTAssertFalse(ask(alarm: true)) }
+    func testNeverWhileAudioPlays() { XCTAssertFalse(ask(audio: true)) }
+    func testNeverWithUnacknowledgedMissedAlarm() { XCTAssertFalse(ask(missed: true)) }
 }

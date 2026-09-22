@@ -32,6 +32,11 @@ class StageCoordinator: ObservableObject {
     @Published var currentStage: Stage = .stage1
     @Published var currentSong: ManifestSong?
 
+    /// True once any stage's audio has actually started playing in this alarm
+    /// session. A morning counts only if audio sounded (handoff §2.4); this
+    /// latch is the proof the engine checks at dismissal.
+    @Published private(set) var audioSounded: Bool = false
+
     // MARK: - Private
 
     private var audioManager: AudioPlayerManager?
@@ -63,6 +68,7 @@ class StageCoordinator: ObservableObject {
         self.currentSong = song
         self.currentFilename = song.fileStem
         self.currentSubdirectory = subdirectory
+        audioSounded = false
         currentStage = .stage1
         playCurrentStage()
     }
@@ -117,27 +123,28 @@ class StageCoordinator: ObservableObject {
 
         switch currentStage {
         case .stage1:
-            audio.playStage1(
+            if audio.playStage1(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
                 region: song.loop1Region
-            )
+            ) { audioSounded = true }
         case .stage2:
-            audio.playStage2(
+            if audio.playStage2(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
                 region: song.loop2Region
-            )
+            ) { audioSounded = true }
         case .stage3:
-            audio.playStage3(
+            if audio.playStage3(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
-                region: song.fullRegion
-            ) { [weak self] in
-                Task { @MainActor in
-                    self?.advanceStage()
+                region: song.fullRegion,
+                onFinished: { [weak self] in
+                    Task { @MainActor in
+                        self?.advanceStage()
+                    }
                 }
-            }
+            ) { audioSounded = true }
         case .replay:
             break
         }

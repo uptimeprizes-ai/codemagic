@@ -73,13 +73,17 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     // MARK: - Playback control
 
+    /// Returns true only if playback actually started — the caller's proof
+    /// that audio sounded. A missing file or player failure returns false,
+    /// and a morning that never sounded must never count.
+    @discardableResult
     func playRegion(
         filename: String,
         subdirectory: String?,
         region: ManifestRegion,
         loop: Bool,
         onFinished: (() -> Void)? = nil
-    ) {
+    ) -> Bool {
         stopAll()
 
         // Re-activate audio session immediately before playback
@@ -87,7 +91,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
         guard let url = bundleURL(for: filename, subdirectory: subdirectory) else {
             print("[AudioPlayerManager] Audio file not found: \(filename)")
-            return
+            return false
         }
 
         do {
@@ -122,24 +126,29 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             }
 
             isPlaying = true
+            return true
         } catch {
             print("[AudioPlayerManager] Failed to create AVAudioPlayer: \(error)")
+            return false
         }
     }
 
-    func playStage1(filename: String, subdirectory: String?, region: ManifestRegion) {
+    @discardableResult
+    func playStage1(filename: String, subdirectory: String?, region: ManifestRegion) -> Bool {
         currentStageLabel = "Stage 1 — The Invite"
-        playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
+        return playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
     }
 
-    func playStage2(filename: String, subdirectory: String?, region: ManifestRegion) {
+    @discardableResult
+    func playStage2(filename: String, subdirectory: String?, region: ManifestRegion) -> Bool {
         currentStageLabel = "Stage 2 — The Nudge"
-        playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
+        return playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: true)
     }
 
-    func playStage3(filename: String, subdirectory: String?, region: ManifestRegion, onFinished: @escaping () -> Void) {
+    @discardableResult
+    func playStage3(filename: String, subdirectory: String?, region: ManifestRegion, onFinished: @escaping () -> Void) -> Bool {
         currentStageLabel = "Stage 3 — The Prize"
-        playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: false, onFinished: onFinished)
+        return playRegion(filename: filename, subdirectory: subdirectory, region: region, loop: false, onFinished: onFinished)
     }
 
     func replay(filename: String, subdirectory: String?, region: ManifestRegion, onFinished: @escaping () -> Void) {

@@ -18,11 +18,10 @@ class AlarmEngine: ObservableObject {
     static let alarmNotificationIdentifier = "com.uptimeprizes.alarm.morning"
     static let alarmFiredNotificationName = Notification.Name("UpTimePrizesAlarmFired")
 
-    // Placeholders — the curator has not ruled copy for the alarm notification.
-    // These must be replaced before any public release; they are deliberately
-    // marked so un-ruled words are visible, never mistaken for approved copy.
-    static let placeholderAlarmTitle = "[COPY PENDING] Alarm"
-    static let placeholderAlarmBody = "[COPY PENDING] Open UpTime Prizes to begin the morning."
+    // The curator has not ruled copy for the alarm notification; the marked
+    // placeholders live in CuratorCopy with everything else user-facing.
+    static let placeholderAlarmTitle = CuratorCopy.placeholderAlarmNotificationTitle
+    static let placeholderAlarmBody = CuratorCopy.placeholderAlarmNotificationBody
 
     // MARK: - Published state
 
@@ -142,46 +141,97 @@ class AlarmEngine: ObservableObject {
 
     // MARK: - Day progression
 
-    /// Called when the user dismisses the alarm.
-    /// Increments completedDays and moves the morning number forward on the
-    /// active journey. Identity is journeyId — never a journey "type".
+    /// One recorded morning per alarm session (§2.4). Reset when a new alarm
+    /// session begins; checked before any counting. Android recorded a
+    /// morning twice when Continue was tapped — this latch and the ledger's
+    /// unique dayKey both forbid it.
+    private var hasCountedThisSession = false
+
+    /// Call when a new alarm session begins (the alarm UI is presented).
+    func beginAlarmSession() {
+        hasCountedThisSession = false
+        isAlarmActive = true
+    }
+
+    /// Everything the Prize screen needs about a counted morning.
+    struct MorningOutcome {
+        let journeyTitle: String
+        let morningNumber: Int   // completedDays after counting
+        let totalDays: Int
+        let journeyComplete: Bool
+        let reachedPrize: Bool
+        let heldStreakOnly: Bool // Catalyst morning (later: Genesis fallback)
+    }
+
+    /// Called when the user dismisses the alarm (any stage), or auto-silence
+    /// ends it. Returns the outcome if the morning counted, nil if it did not
+    /// (no Prize screen without a counted morning, §2.5).
     ///
-    /// currentDay keeps moving after completion and never freezes; the song
-    /// for a morning is derived from it with wrap-around at lookup time, so
-    /// an 8-song journey replays song 1 on morning 9.
-    ///
-    /// NOTE (step 4, counting pass — not yet implemented here): the
-    /// sounded-morning rule, one-morning-per-calendar-day, and
-    /// one-recorded-morning-per-session are layered on in the counting pass.
-    func handleAlarmDismissed() {
+    /// The rules (§2.4):
+    /// - counts only if audio actually sounded;
+    /// - one morning per calendar day (ledger-enforced);
+    /// - one recorded morning per alarm session (session latch);
+    /// - a Catalyst morning holds the streak and advances no journey;
+    /// - the morning index keeps moving after completion, wrapping at lookup.
+    func handleAlarmDismissed(audioSounded: Bool, stageAtDismiss: String, reachedPrize: Bool, date: Date = Date()) -> MorningOutcome? {
+        defer { isAlarmActive = false }
+
+        guard audioSounded else { return nil } // nothing played → nothing counted
+        guard !hasCountedThisSession else { return nil }
+
         let fetchJourneys = FetchDescriptor<JourneyEntity>()
         guard let journeys = try? context.fetch(fetchJourneys),
               let active = journeys.first(where: { $0.isActive }) else {
-            return
+            return nil
         }
 
-        active.completedDays += 1
-        active.currentDay += 1
+        let ledger = MorningLedger(context: context)
+        let isCatalyst = active.id == "catalyst"
 
-        if active.completedDays >= active.totalDays {
-            active.purchaseState = "UNLOCKED_FOR_PLAYBACK"
-        }
+        let counted = ledger.record(
+            date: date,
+            journeyId: active.id,
+            stageAtDismiss: stageAtDismiss,
+            reachedPrize: reachedPrize,
+            heldStreakOnly: isCatalyst,
+            advancedJourney: !isCatalyst
+        )
+        guard counted else { return nil } // this calendar day already has its morning
 
-        // Genesis progress also drives the Discover unlock: the store opens
-        // after the 9th Genesis morning is counted.
-        if active.id == "genesis" {
-            let fetchDemo = FetchDescriptor<DemoStateEntity>()
-            if let demo = try? context.fetch(fetchDemo).first {
-                demo.completedDays = active.completedDays
-                demo.currentDay = active.currentDay
-                if demo.completedDays >= 9 {
-                    demo.isPurchaseOffered = true
+        hasCountedThisSession = true
+
+        if !isCatalyst {
+            active.completedDays += 1
+            active.currentDay += 1
+
+            if active.completedDays >= active.totalDays {
+                active.purchaseState = "UNLOCKED_FOR_PLAYBACK"
+            }
+
+            // Genesis progress also drives the Discover unlock: the store
+            // opens after the 9th Genesis morning is counted.
+            if active.id == "genesis" {
+                let fetchDemo = FetchDescriptor<DemoStateEntity>()
+                if let demo = try? context.fetch(fetchDemo).first {
+                    demo.completedDays = active.completedDays
+                    demo.currentDay = active.currentDay
+                    if demo.completedDays >= 9 {
+                        demo.isPurchaseOffered = true
+                    }
                 }
             }
         }
 
         try? context.save()
-        isAlarmActive = false
+
+        return MorningOutcome(
+            journeyTitle: active.title,
+            morningNumber: active.completedDays,
+            totalDays: active.totalDays,
+            journeyComplete: !isCatalyst && active.completedDays >= active.totalDays,
+            reachedPrize: reachedPrize,
+            heldStreakOnly: isCatalyst
+        )
     }
 
     // MARK: - Song resolution

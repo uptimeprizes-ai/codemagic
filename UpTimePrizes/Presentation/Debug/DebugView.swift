@@ -71,7 +71,15 @@ struct DebugView: View {
                     .foregroundColor(.red)
 
                     Button("Simulate Alarm Dismiss (Advance Day)") {
-                        alarmEngine.handleAlarmDismissed()
+                        // Debug shortcut: a fresh session with sounded audio.
+                        // The one-morning-per-calendar-day rule still applies,
+                        // so a second tap on the same day counts nothing.
+                        alarmEngine.beginAlarmSession()
+                        _ = alarmEngine.handleAlarmDismissed(
+                            audioSounded: true,
+                            stageAtDismiss: "prize",
+                            reachedPrize: true
+                        )
                     }
                     .foregroundColor(.blue)
 

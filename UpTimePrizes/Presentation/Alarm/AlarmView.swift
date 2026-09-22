@@ -132,7 +132,9 @@ struct AlarmView: View {
         Button {
             onDismiss()
         } label: {
-            Text("Begin My Day")
+            // "Dismiss" is the specification's own term (§2.4); the previous
+            // label was agent-written copy with no curator ruling.
+            Text("Dismiss")
                 .font(.custom("PlayfairDisplay-SemiBold", size: 17))
                 .foregroundColor(Color("paper"))
                 .frame(maxWidth: .infinity)

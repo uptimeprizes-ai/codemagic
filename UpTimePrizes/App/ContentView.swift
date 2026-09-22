@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import StoreKit
 import UserNotifications
 
 // MARK: - NotificationDelegate
@@ -60,7 +61,9 @@ struct ContentView: View {
 
     @State private var alarmEngine: AlarmEngine?
     @State private var isSeeded: Bool = false
+    @State private var prizeOutcome: AlarmEngine.MorningOutcome?
     @StateObject private var notificationDelegate = NotificationDelegate()
+    @Environment(\.requestReview) private var requestReview
 
     // MARK: - Body
 
@@ -74,23 +77,47 @@ struct ContentView: View {
                     storeKit: storeKit
                 )
                 .fullScreenCover(isPresented: $showAlarm) {
-                    AlarmView(
-                        stageCoordinator: stageCoordinator,
-                        audioManager: audioManager,
-                        onDismiss: {
-                            engine.handleAlarmDismissed()
-                            stageCoordinator.stopAlarm()
+                    // The Prize screen is presented inside the same cover as
+                    // the alarm, so the alarm screen can never close before
+                    // the Prize screen renders (Android bug guard 1, §2.5).
+                    if let outcome = prizeOutcome {
+                        PrizeView(outcome: outcome) {
+                            prizeOutcome = nil
                             showAlarm = false
-                        },
-                        onSnooze: {
-                            engine.snoozeAlarm()
-                            stageCoordinator.stopAlarm()
-                            showAlarm = false
+                            maybeRequestReview()
                         }
-                    )
+                    } else {
+                        AlarmView(
+                            stageCoordinator: stageCoordinator,
+                            audioManager: audioManager,
+                            onDismiss: {
+                                let stage = stageCoordinator.currentStage
+                                let outcome = engine.handleAlarmDismissed(
+                                    audioSounded: stageCoordinator.audioSounded,
+                                    stageAtDismiss: stageName(for: stage),
+                                    reachedPrize: stage == .stage3 || stage == .replay
+                                )
+                                stageCoordinator.stopAlarm()
+                                if let outcome {
+                                    prizeOutcome = outcome
+                                } else {
+                                    // Nothing sounded or the day already has
+                                    // its morning — no count, no Prize screen.
+                                    showAlarm = false
+                                }
+                            },
+                            onSnooze: {
+                                engine.snoozeAlarm()
+                                stageCoordinator.stopAlarm()
+                                showAlarm = false
+                            }
+                        )
+                    }
                 }
                 .onChange(of: showAlarm) { _, newValue in
                     if newValue {
+                        prizeOutcome = nil
+                        engine.beginAlarmSession()
                         if let song = engine.currentSong(from: audioManager) {
                             let sub = engine.subdirectory(for: song.journeyId)
                             stageCoordinator.startAlarm(song: song, subdirectory: sub, audioManager: audioManager)
@@ -149,5 +176,34 @@ struct ContentView: View {
 
         // Request notification permission on first launch
         _ = await engine.requestNotificationPermission()
+    }
+
+    // MARK: - Helpers
+
+    private func stageName(for stage: StageCoordinator.Stage) -> String {
+        switch stage {
+        case .stage1: return "invite"
+        case .stage2: return "nudge"
+        case .stage3, .replay: return "prize"
+        }
+    }
+
+    /// Review prompt (§2.6): asks only from a normal app screen after the
+    /// alarm flow has fully ended — never during an alarm or while audio
+    /// plays. requestReview needs no permission (Android bug guard 2: no
+    /// permission-requiring calls on the post-alarm path).
+    private func maybeRequestReview() {
+        let ledger = MorningLedger(context: context)
+        let eligible = ReviewPromptManager.shouldAsk(
+            soundedMornings: ledger.soundedMorningsCount(),
+            attemptsSoFar: ReviewPromptManager.attempts(),
+            lastCountedMorningIsRecent: ledger.lastCountedDayIsTodayOrYesterday(),
+            alarmActive: alarmEngine?.isAlarmActive ?? false,
+            audioPlaying: audioManager.isPlaying,
+            hasUnacknowledgedMissedAlarm: false // missed-alarm pass not yet built (§2.7)
+        )
+        guard eligible else { return }
+        ReviewPromptManager.recordAttempt()
+        requestReview()
     }
 }
