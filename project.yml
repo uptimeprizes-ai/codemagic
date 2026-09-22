@@ -25,11 +25,14 @@ targets:
       - path: UpTimePrizes
         excludes:
           - "Resources/Audio/**"
+          - "Resources/uptime_full_manifest.json"
     resources:
       - path: UpTimePrizes/Resources/Assets.xcassets
       - path: UpTimePrizes/Resources/Audio
         buildPhase: resources
       - path: UpTimePrizes/Resources/Fonts
+        buildPhase: resources
+      - path: UpTimePrizes/Resources/uptime_full_manifest.json
         buildPhase: resources
     settings:
       base:
@@ -73,3 +76,12 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/UpTimePrizes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/UpTimePrizes"
     dependencies:
       - target: UpTimePrizes
+
+schemes:
+  UpTimePrizes:
+    build:
+      targets:
+        UpTimePrizes: all
+    test:
+      targets:
+        - UpTimePrizesTests

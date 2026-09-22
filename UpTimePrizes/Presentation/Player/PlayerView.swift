@@ -41,7 +41,7 @@ struct PlayerView: View {
     }
 
     private var catalystJourney: JourneyEntity? {
-        journeys.first(where: { $0.type == "SPECIAL_DAY" && $0.purchaseState == "UNLOCKED_FOR_PLAYBACK" })
+        journeys.first(where: { $0.id == "catalyst" && $0.purchaseState == "UNLOCKED_FOR_PLAYBACK" })
     }
 
     // MARK: - Body
@@ -170,10 +170,10 @@ struct PlayerView: View {
     private var unlockedSongsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(unlockedJourneys, id: \.id) { journey in
-                if journey.type != "SPECIAL_DAY" {
+                if journey.id != "catalyst" {
                     let journeySongs = songs
-                        .filter { $0.libraryId == journey.id && $0.isAvailable }
-                        .sorted { $0.dayNumber < $1.dayNumber }
+                        .filter { $0.journeyId == journey.id && $0.isAvailable }
+                        .sorted { $0.sortOrder < $1.sortOrder }
 
                     if !journeySongs.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -200,8 +200,8 @@ struct PlayerView: View {
                 .foregroundColor(Color("ink"))
 
             let catalystSongs = songs
-                .filter { $0.libraryId == "special-day" && $0.isAvailable }
-                .sorted { $0.dayNumber < $1.dayNumber }
+                .filter { $0.journeyId == "catalyst" && $0.isAvailable }
+                .sorted { $0.sortOrder < $1.sortOrder }
 
             ForEach(catalystSongs, id: \.id) { song in
                 songRow(song: song, subdirectory: nil)
@@ -226,7 +226,7 @@ struct PlayerView: View {
                 Text(song.title)
                     .font(.custom("PlayfairDisplay-SemiBold", size: 15))
                     .foregroundColor(Color("ink"))
-                Text("Day \(song.dayNumber)")
+                Text("Day \(song.sortOrder)")
                     .font(.custom("PlayfairDisplay-Regular", size: 12))
                     .foregroundColor(Color("ink").opacity(0.5))
             }
@@ -345,13 +345,13 @@ struct PlayerView: View {
             // Only one song plays at a time
             audioManager.stopAll()
             playingPreviewId = song.id
-            // Play Stage 3 region (the full song) for preview
-            if let manifest = AudioPlayerManager.loadManifest(),
-               let manifestSong = manifest.libraries[song.libraryId]?.songs.first(where: { $0.filename == song.filename }) {
+            // Play The Prize (fullRegion) for preview
+            if let manifestSong = audioManager.songs(forJourneyId: song.journeyId)
+                .first(where: { $0.id == song.id }) {
                 audioManager.playStage3(
-                    filename: song.filename,
+                    filename: manifestSong.fileStem,
                     subdirectory: subdirectory,
-                    region: manifestSong.regions.stage3
+                    region: manifestSong.fullRegion
                 ) { [weak audioManager] in
                     Task { @MainActor in
                         audioManager?.stopAll()
@@ -359,7 +359,7 @@ struct PlayerView: View {
                 }
             } else {
                 // Fallback: play full file
-                audioManager.play(filename: song.filename, subdirectory: subdirectory)
+                audioManager.play(filename: song.fileStem, subdirectory: subdirectory)
             }
         }
     }
@@ -381,7 +381,7 @@ struct PlayerView: View {
     }
 
     private func subdirectory(for journeyId: String) -> String? {
-        journeyId == "demo" ? "demo" : nil
+        journeyId == "genesis" ? "demo" : nil
     }
 }
 

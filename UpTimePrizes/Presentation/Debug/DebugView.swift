@@ -99,7 +99,7 @@ struct DebugView: View {
             demo.currentDay = 5
             demo.isPurchaseOffered = true
         }
-        if let genesis = journeys.first(where: { $0.id == "demo" }) {
+        if let genesis = journeys.first(where: { $0.id == "genesis" }) {
             genesis.completedDays = 9
             genesis.currentDay = 5
         }
@@ -116,8 +116,8 @@ struct DebugView: View {
         for journey in journeys {
             journey.completedDays = 0
             journey.currentDay = 1
-            journey.isActive = journey.id == "demo"
-            if journey.type != "DEMO" {
+            journey.isActive = journey.id == "genesis"
+            if journey.id != "genesis" {
                 journey.purchaseState = "NOT_OWNED"
             } else {
                 journey.purchaseState = "ACTIVE_IN_PROGRESS"

@@ -30,6 +30,29 @@ workflows:
       - name: Generate Xcode project
         script: |
           xcodegen generate
+      - name: Run unit tests
+        script: |
+          # A failing test stops the build here — nothing reaches TestFlight
+          # without the rules passing. Picks any available iPhone simulator.
+          DEVICE_ID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          for runtime, devs in devices.items():
+              if 'iOS' not in runtime:
+                  continue
+              for dev in devs:
+                  if dev.get('isAvailable') and 'iPhone' in dev.get('name', ''):
+                      print(dev['udid']); raise SystemExit
+          raise SystemExit('no iPhone simulator available')
+          ")
+          echo "Using simulator: $DEVICE_ID"
+          set -o pipefail
+          mkdir -p /tmp/xcodebuild_logs
+          xcodebuild test \
+            -project UpTimePrizes.xcodeproj \
+            -scheme UpTimePrizes \
+            -destination "id=$DEVICE_ID" \
+            | tee /tmp/xcodebuild_logs/tests.log
       - name: Set up code signing
         script: |
           xcode-project use-profiles

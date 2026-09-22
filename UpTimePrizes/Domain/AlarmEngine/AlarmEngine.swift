@@ -18,6 +18,12 @@ class AlarmEngine: ObservableObject {
     static let alarmNotificationIdentifier = "com.uptimeprizes.alarm.morning"
     static let alarmFiredNotificationName = Notification.Name("UpTimePrizesAlarmFired")
 
+    // Placeholders — the curator has not ruled copy for the alarm notification.
+    // These must be replaced before any public release; they are deliberately
+    // marked so un-ruled words are visible, never mistaken for approved copy.
+    static let placeholderAlarmTitle = "[COPY PENDING] Alarm"
+    static let placeholderAlarmBody = "[COPY PENDING] Open UpTime Prizes to begin the morning."
+
     // MARK: - Published state
 
     @Published var isAlarmActive: Bool = false
@@ -57,8 +63,8 @@ class AlarmEngine: ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
 
         let content = UNMutableNotificationContent()
-        content.title = "Good morning."
-        content.body = "Your morning experience is ready."
+        content.title = Self.placeholderAlarmTitle
+        content.body = Self.placeholderAlarmBody
         content.sound = UNNotificationSound.default
         content.userInfo = ["type": "alarm"]
 
@@ -136,9 +142,17 @@ class AlarmEngine: ObservableObject {
 
     // MARK: - Day progression
 
-    /// Called when the user dismisses the alarm at any stage.
-    /// Increments completedDays and currentDay on the active journey.
-    /// Sets purchaseState to UNLOCKED_FOR_PLAYBACK when journey is complete.
+    /// Called when the user dismisses the alarm.
+    /// Increments completedDays and moves the morning number forward on the
+    /// active journey. Identity is journeyId — never a journey "type".
+    ///
+    /// currentDay keeps moving after completion and never freezes; the song
+    /// for a morning is derived from it with wrap-around at lookup time, so
+    /// an 8-song journey replays song 1 on morning 9.
+    ///
+    /// NOTE (step 4, counting pass — not yet implemented here): the
+    /// sounded-morning rule, one-morning-per-calendar-day, and
+    /// one-recorded-morning-per-session are layered on in the counting pass.
     func handleAlarmDismissed() {
         let fetchJourneys = FetchDescriptor<JourneyEntity>()
         guard let journeys = try? context.fetch(fetchJourneys),
@@ -146,30 +160,20 @@ class AlarmEngine: ObservableObject {
             return
         }
 
-        // Increment progress
         active.completedDays += 1
+        active.currentDay += 1
 
-        // Check if journey is complete
         if active.completedDays >= active.totalDays {
             active.purchaseState = "UNLOCKED_FOR_PLAYBACK"
         }
 
-        // Advance currentDay (cycles through totalDays for DEMO type)
-        if active.type == "DEMO" {
-            // Genesis has 5 songs but 9 days — cycle through songs
-            let songCount = 5
-            active.currentDay = (active.currentDay % songCount) + 1
-        } else {
-            active.currentDay = min(active.currentDay + 1, active.totalDays)
-        }
-
-        // Also update DemoState if active journey is DEMO
-        if active.type == "DEMO" {
+        // Genesis progress also drives the Discover unlock: the store opens
+        // after the 9th Genesis morning is counted.
+        if active.id == "genesis" {
             let fetchDemo = FetchDescriptor<DemoStateEntity>()
             if let demo = try? context.fetch(fetchDemo).first {
                 demo.completedDays = active.completedDays
                 demo.currentDay = active.currentDay
-                // Unlock Discover page after 9 days
                 if demo.completedDays >= 9 {
                     demo.isPurchaseOffered = true
                 }
@@ -182,25 +186,23 @@ class AlarmEngine: ObservableObject {
 
     // MARK: - Song resolution
 
-    /// Returns the song to play for the currently active journey.
+    /// Returns the song to play for the currently active journey's morning,
+    /// wrapping round the journey's song list.
     func currentSong(from audioManager: AudioPlayerManager) -> ManifestSong? {
         let fetchJourneys = FetchDescriptor<JourneyEntity>()
         guard let journeys = try? context.fetch(fetchJourneys),
               let active = journeys.first(where: { $0.isActive }) else {
             return nil
         }
-
-        let libraryId = active.id
-        let dayNumber = active.currentDay
-        return audioManager.song(for: libraryId, dayNumber: dayNumber)
+        return audioManager.song(forJourneyId: active.id, morning: active.currentDay)
     }
 
-    /// Returns the subdirectory for bundled audio files.
+    /// Bundle subdirectory for a journey's audio. Only The Genesis ships
+    /// inside the app; its files currently live in the legacy Audio/demo
+    /// folder until the pipeline's iOS set replaces them (step 5). Every
+    /// other journey's audio arrives by download.
     func subdirectory(for journeyId: String) -> String? {
-        switch journeyId {
-        case "demo": return "demo"
-        default: return nil // paid content downloaded to documents directory
-        }
+        journeyId == "genesis" ? "demo" : nil
     }
 
     // MARK: - Private helpers
@@ -229,8 +231,8 @@ extension AlarmEngine {
         let center = UNUserNotificationCenter.current()
 
         let content = UNMutableNotificationContent()
-        content.title = "Good morning."
-        content.body = "Your morning experience is ready."
+        content.title = Self.placeholderAlarmTitle
+        content.body = Self.placeholderAlarmBody
         content.sound = UNNotificationSound.default
         content.userInfo = ["type": "alarm"]
 

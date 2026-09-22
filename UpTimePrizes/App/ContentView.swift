@@ -92,7 +92,7 @@ struct ContentView: View {
                 .onChange(of: showAlarm) { _, newValue in
                     if newValue {
                         if let song = engine.currentSong(from: audioManager) {
-                            let sub = engine.subdirectory(for: song.id.hasPrefix("demo") ? "demo" : (song.id.hasPrefix("special") ? "special-day" : "library-a"))
+                            let sub = engine.subdirectory(for: song.journeyId)
                             stageCoordinator.startAlarm(song: song, subdirectory: sub, audioManager: audioManager)
                         }
                     }

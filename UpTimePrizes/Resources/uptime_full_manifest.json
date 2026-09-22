@@ -1,0 +1,1068 @@
+{
+  "version": "3.0",
+  "total_songs": 42,
+  "generated_at": "2026-08-05T00:00:00Z",
+  "journeys": [
+    {
+      "journeyId": "genesis",
+      "title": "The Genesis",
+      "category": "demo",
+      "totalDays": 9,
+      "productId": "",
+      "price": "Free",
+      "description": "5 original songs. 9 mornings.",
+      "sortOrder": 0,
+      "packName": "",
+      "framingLine": "Five songs. Nine mornings.",
+      "entitlementId": ""
+    },
+    {
+      "journeyId": "cast-prelude",
+      "title": "The Cast Prelude",
+      "category": "signature",
+      "totalDays": 8,
+      "productId": "com.uptime.prizes.signature",
+      "price": "$2.99",
+      "description": "What makes a Signature Journey different from a full Journey is the curation — each song edited and orchestrated specifically for the three-stage experience. The depth of attention here is that of a featured release.\nMore Signature Journeys are coming.",
+      "sortOrder": 1,
+      "packName": "signature",
+      "framingLine": "Eight songs from our Signature Series.",
+      "entitlementId": ""
+    },
+    {
+      "journeyId": "warm-front",
+      "title": "The Warm Front",
+      "category": "signature",
+      "totalDays": 8,
+      "productId": "com.uptime.prizes.signature.warm_front",
+      "price": "$4.99",
+      "description": "Vintage swing and golden-era jazz drawn from 1930s and 40s Broadway, Big Band, and Neo Urban Swing.",
+      "sortOrder": 2,
+      "packName": "warm_front",
+      "framingLine": "Eight songs for the moments that deserve a little warmth.",
+      "entitlementId": ""
+    },
+    {
+      "journeyId": "daybreak-shuffle",
+      "title": "The Daybreak Shuffle",
+      "category": "signature",
+      "totalDays": 8,
+      "productId": "com.uptime.prizes.signature.daybreak_shuffle",
+      "price": "$4.99",
+      "description": "Big Band Swing, Boogie Woogie, and Gypsy Jazz from the 1930s and 40s, built for a morning that is already moving.",
+      "sortOrder": 3,
+      "packName": "daybreak_shuffle",
+      "framingLine": "Eight songs for mornings with somewhere to be.",
+      "entitlementId": ""
+    },
+    {
+      "journeyId": "catalyst",
+      "title": "The Catalyst Tracks",
+      "category": "special-day",
+      "totalDays": 5,
+      "productId": "com.uptime.prizes.special_day",
+      "price": "$1.99",
+      "description": "The morning you mark a milestone.\nThe morning you start a trip.\nThe morning you claim solitude.\nThe morning you walk into something demanding.\nThe morning you forgive yesterday and begin again.\nEach track features a different member of the Ensemble.",
+      "sortOrder": 4,
+      "packName": "special_day",
+      "framingLine": "Five songs, each composed for a specific kind of morning.",
+      "entitlementId": ""
+    },
+    {
+      "journeyId": "educator",
+      "title": "The Teacher",
+      "category": "educator",
+      "totalDays": 8,
+      "productId": "",
+      "entitlementId": "educator",
+      "packName": "educator",
+      "price": "",
+      "framingLine": "Eight songs for the people who teach.",
+      "description": "Eight songs for the people who teach. Granted, not sold.",
+      "sortOrder": 5
+    }
+  ],
+  "songs": [
+    {
+      "id": "demo-01",
+      "category": "demo",
+      "subfolder": "free-sampler-song",
+      "fileName": "bright_side_swing.ogg",
+      "sortOrder": 1,
+      "title": "Bright Side Swing",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.09,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30058
+      },
+      "loop2Region": {
+        "startMs": 33994,
+        "endMs": 55715
+      },
+      "fullRegion": {
+        "startMs": 59737,
+        "endMs": 229592
+      },
+      "journeyId": "genesis"
+    },
+    {
+      "id": "demo-02",
+      "category": "demo",
+      "subfolder": "free-sampler-song",
+      "fileName": "the_uptime_swing.ogg",
+      "sortOrder": 2,
+      "title": "The UpTime Swing",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.05,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 18668
+      },
+      "loop2Region": {
+        "startMs": 22389,
+        "endMs": 40728
+      },
+      "fullRegion": {
+        "startMs": 43924,
+        "endMs": 211764
+      },
+      "journeyId": "genesis"
+    },
+    {
+      "id": "demo-03",
+      "category": "demo",
+      "subfolder": "free-sampler-song",
+      "fileName": "wake_up.ogg",
+      "sortOrder": 3,
+      "title": "Wake Up",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.12,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 26255
+      },
+      "loop2Region": {
+        "startMs": 30582,
+        "endMs": 46434
+      },
+      "fullRegion": {
+        "startMs": 49809,
+        "endMs": 219624
+      },
+      "journeyId": "genesis"
+    },
+    {
+      "id": "signature-01",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "cloud_9.ogg",
+      "sortOrder": 1,
+      "title": "Cloud 9",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30318
+      },
+      "loop2Region": {
+        "startMs": 39110,
+        "endMs": 102590
+      },
+      "fullRegion": {
+        "startMs": 111024,
+        "endMs": 315736
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-02",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "cup_o_sunshine.ogg",
+      "sortOrder": 2,
+      "title": "Cup O' Sunshine",
+      "genre": "1930s Neo Big Band Swing",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 45745
+      },
+      "loop2Region": {
+        "startMs": 55058,
+        "endMs": 109041
+      },
+      "fullRegion": {
+        "startMs": 117805,
+        "endMs": 334924
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-03",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "dewdrop_serenade.ogg",
+      "sortOrder": 3,
+      "title": "Dewdrop Serenade",
+      "genre": "1940s Big Band Swing",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 51936
+      },
+      "loop2Region": {
+        "startMs": 60660,
+        "endMs": 113978
+      },
+      "fullRegion": {
+        "startMs": 122314,
+        "endMs": 375190
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-04",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "just_this_moment.ogg",
+      "sortOrder": 4,
+      "title": "Just This Moment",
+      "genre": "1930s Western Swing",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36434
+      },
+      "loop2Region": {
+        "startMs": 45035,
+        "endMs": 91150
+      },
+      "fullRegion": {
+        "startMs": 100246,
+        "endMs": 383004
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-05",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "my_own_sweet_melody.ogg",
+      "sortOrder": 5,
+      "title": "My Own Sweet Melody",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.03,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19989
+      },
+      "loop2Region": {
+        "startMs": 28165,
+        "endMs": 52177
+      },
+      "fullRegion": {
+        "startMs": 60945,
+        "endMs": 270144
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-06",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "step_right_swing_bright.ogg",
+      "sortOrder": 6,
+      "title": "Step Right Swing Bright",
+      "genre": "1940s Big Band Swing",
+      "lufs": -14.03,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 35389
+      },
+      "loop2Region": {
+        "startMs": 44857,
+        "endMs": 79993
+      },
+      "fullRegion": {
+        "startMs": 88864,
+        "endMs": 317531
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-07",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "sunrise_satin_swing.ogg",
+      "sortOrder": 7,
+      "title": "Sunrise Satin Swing",
+      "genre": "1930s Neo Big Band Swing",
+      "lufs": -14.04,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 28359
+      },
+      "loop2Region": {
+        "startMs": 37061,
+        "endMs": 79639
+      },
+      "fullRegion": {
+        "startMs": 88233,
+        "endMs": 346872
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "signature-08",
+      "category": "signature",
+      "subfolder": "UpTime Signature",
+      "fileName": "weary_drum_electro.ogg",
+      "sortOrder": 8,
+      "title": "Weary Drum",
+      "genre": "1940s Neo Urban Swing",
+      "lufs": -14.06,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36147
+      },
+      "loop2Region": {
+        "startMs": 44654,
+        "endMs": 79956
+      },
+      "fullRegion": {
+        "startMs": 88272,
+        "endMs": 303024
+      },
+      "journeyId": "cast-prelude"
+    },
+    {
+      "id": "special-day-01",
+      "category": "special-day",
+      "subfolder": "special-day-song",
+      "fileName": "the_anniversary_of_you.ogg",
+      "sortOrder": 1,
+      "title": "The Anniversary of You",
+      "genre": "Bright Up-Tempo Big Band Swing",
+      "cast": "Reno (The Heartthrob)",
+      "bpm": 155,
+      "purpose": "Milestone Celebration",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30940
+      },
+      "loop2Region": {
+        "startMs": 33030,
+        "endMs": 84180
+      },
+      "fullRegion": {
+        "startMs": 86270,
+        "endMs": 271820
+      },
+      "journeyId": "catalyst"
+    },
+    {
+      "id": "special-day-02",
+      "category": "special-day",
+      "subfolder": "special-day-song",
+      "fileName": "the_vacation_kickoff.ogg",
+      "sortOrder": 2,
+      "title": "The Vacation Kickoff",
+      "genre": "Neo-Celtic Big Band Swing",
+      "cast": "Jax (Chaotic Female) & Sam (Sharp Male)",
+      "bpm": 145,
+      "purpose": "High-Adrenaline Escape",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19920
+      },
+      "loop2Region": {
+        "startMs": 24160,
+        "endMs": 39060
+      },
+      "fullRegion": {
+        "startMs": 42060,
+        "endMs": 247860
+      },
+      "journeyId": "catalyst"
+    },
+    {
+      "id": "special-day-03",
+      "category": "special-day",
+      "subfolder": "special-day-song",
+      "fileName": "my_own_company.ogg",
+      "sortOrder": 3,
+      "title": "My Own Company",
+      "genre": "1930s Harlem Renaissance Jazz / Slow Blues",
+      "cast": "Sunday (The Star)",
+      "bpm": 110,
+      "purpose": "Intentional Isolation",
+      "lufs": -13.8,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 33410
+      },
+      "loop2Region": {
+        "startMs": 35470,
+        "endMs": 92530
+      },
+      "fullRegion": {
+        "startMs": 94610,
+        "endMs": 316400
+      },
+      "journeyId": "catalyst"
+    },
+    {
+      "id": "special-day-04",
+      "category": "special-day",
+      "subfolder": "special-day-song",
+      "fileName": "step_into_the_room.ogg",
+      "sortOrder": 4,
+      "title": "Step Into The Room (Showtime)",
+      "genre": "Fast Classic Jazz & Bebop Hybrid",
+      "cast": "Clara (Velvety Female) & Ruby (Brassy Female)",
+      "bpm": 145,
+      "purpose": "High-Stakes Hustle",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 21160
+      },
+      "loop2Region": {
+        "startMs": 23170,
+        "endMs": 42920
+      },
+      "fullRegion": {
+        "startMs": 44940,
+        "endMs": 217969
+      },
+      "journeyId": "catalyst"
+    },
+    {
+      "id": "special-day-05",
+      "category": "special-day",
+      "subfolder": "special-day-song",
+      "fileName": "the_slate_is_washed.ogg",
+      "sortOrder": 5,
+      "title": "The Slate is Washed (The Clean Slate)",
+      "genre": "Dynamic Ballad to Texas Western Swing",
+      "cast": "Wyatt (The Soulful Sage)",
+      "bpm": "70 shifting to 155",
+      "purpose": "The Restoration Morning",
+      "lufs": -14.0,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 54920
+      },
+      "loop2Region": {
+        "startMs": 56970,
+        "endMs": 112550
+      },
+      "fullRegion": {
+        "startMs": 114620,
+        "endMs": 290200
+      },
+      "journeyId": "catalyst"
+    },
+    {
+      "id": "demo-04",
+      "category": "demo",
+      "subfolder": "free-sampler-song",
+      "fileName": "no_permission.ogg",
+      "sortOrder": 4,
+      "title": "No Permission",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 13841
+      },
+      "loop2Region": {
+        "startMs": 18148,
+        "endMs": 31032
+      },
+      "fullRegion": {
+        "startMs": 35336,
+        "endMs": 288790
+      },
+      "journeyId": "genesis"
+    },
+    {
+      "id": "demo-05",
+      "category": "demo",
+      "subfolder": "free-sampler-song",
+      "fileName": "uptime_go_go.ogg",
+      "sortOrder": 5,
+      "title": "Uptime Go-Go",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 10895
+      },
+      "loop2Region": {
+        "startMs": 14623,
+        "endMs": 24438
+      },
+      "fullRegion": {
+        "startMs": 27846,
+        "endMs": 229830
+      },
+      "journeyId": "genesis"
+    },
+    {
+      "id": "warm-front-01",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "a_little_bit_of_sunshine.ogg",
+      "sortOrder": 1,
+      "title": "A Little Bit of Sunshine",
+      "genre": "1930s-40s Broadway",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 57020
+      },
+      "loop2Region": {
+        "startMs": 66300,
+        "endMs": 142694
+      },
+      "fullRegion": {
+        "startMs": 150976,
+        "endMs": 396380
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-02",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "a_smiles_my_best_accessory.ogg",
+      "sortOrder": 2,
+      "title": "A Smile's My Best Accessory",
+      "genre": "1930s Neo Urban Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 52306
+      },
+      "loop2Region": {
+        "startMs": 62284,
+        "endMs": 132836
+      },
+      "fullRegion": {
+        "startMs": 141305,
+        "endMs": 375020
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-03",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "coffee_on_the_porch.ogg",
+      "sortOrder": 3,
+      "title": "Coffee on the Porch",
+      "genre": "1940s Western Swing",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 39473
+      },
+      "loop2Region": {
+        "startMs": 49138,
+        "endMs": 131080
+      },
+      "fullRegion": {
+        "startMs": 139169,
+        "endMs": 358900
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-04",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "dancing_through_the_doldrums.ogg",
+      "sortOrder": 4,
+      "title": "Dancing Through the Doldrums",
+      "genre": "1940s Big Band Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36680
+      },
+      "loop2Region": {
+        "startMs": 48441,
+        "endMs": 155852
+      },
+      "fullRegion": {
+        "startMs": 166023,
+        "endMs": 379610
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-05",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "got_that_pep_in_my_step.ogg",
+      "sortOrder": 5,
+      "title": "Got That Pep in My Step",
+      "genre": "1930s Gypsy Big Band Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30197
+      },
+      "loop2Region": {
+        "startMs": 39533,
+        "endMs": 83744
+      },
+      "fullRegion": {
+        "startMs": 92006,
+        "endMs": 281170
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-06",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "raincoat_rhythm.ogg",
+      "sortOrder": 6,
+      "title": "Raincoat Rhythm",
+      "genre": "1930s Neo Urban Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 32294
+      },
+      "loop2Region": {
+        "startMs": 41705,
+        "endMs": 87826
+      },
+      "fullRegion": {
+        "startMs": 97940,
+        "endMs": 291020
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-07",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "spilled_milk_melodies.ogg",
+      "sortOrder": 7,
+      "title": "Spilled Milk Melodies",
+      "genre": "1940s Jump Blues Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 23159
+      },
+      "loop2Region": {
+        "startMs": 32020,
+        "endMs": 71624
+      },
+      "fullRegion": {
+        "startMs": 80763,
+        "endMs": 261700
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "warm-front-08",
+      "category": "signature",
+      "subfolder": "UpTime The Warm Front",
+      "fileName": "the_umbrella_fella.ogg",
+      "sortOrder": 8,
+      "title": "The Umbrella Fella",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 27419
+      },
+      "loop2Region": {
+        "startMs": 36963,
+        "endMs": 111814
+      },
+      "fullRegion": {
+        "startMs": 120167,
+        "endMs": 315790
+      },
+      "journeyId": "warm-front"
+    },
+    {
+      "id": "daybreak-shuffle-01",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "a_pocketful_of_positivity.ogg",
+      "sortOrder": 1,
+      "title": "A Pocketful of Positivity",
+      "genre": "1930s Big Band Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 42914
+      },
+      "loop2Region": {
+        "startMs": 52224,
+        "endMs": 116997
+      },
+      "fullRegion": {
+        "startMs": 125521,
+        "endMs": 338610
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-02",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "bouncing_back_with_a_beat.ogg",
+      "sortOrder": 2,
+      "title": "Bouncing Back with a Beat",
+      "genre": "1940s Big Band Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 46918
+      },
+      "loop2Region": {
+        "startMs": 56334,
+        "endMs": 145178
+      },
+      "fullRegion": {
+        "startMs": 153927,
+        "endMs": 374613
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-03",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "grin_and_bear_it.ogg",
+      "sortOrder": 3,
+      "title": "Grin and Bear It",
+      "genre": "1940s Boogie Woogie",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 34756
+      },
+      "loop2Region": {
+        "startMs": 43160,
+        "endMs": 98636
+      },
+      "fullRegion": {
+        "startMs": 107083,
+        "endMs": 302170
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-04",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "dusty_desk_drawer.ogg",
+      "sortOrder": 4,
+      "title": "Dusty Desk Drawer",
+      "genre": "1940s Western Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 21132
+      },
+      "loop2Region": {
+        "startMs": 30664,
+        "endMs": 116364
+      },
+      "fullRegion": {
+        "startMs": 125911,
+        "endMs": 333740
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-05",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "the_syncopated_step.ogg",
+      "sortOrder": 5,
+      "title": "The Syncopated Step",
+      "genre": "1930s Gypsy Big Band Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 27376
+      },
+      "loop2Region": {
+        "startMs": 37518,
+        "endMs": 78865
+      },
+      "fullRegion": {
+        "startMs": 87246,
+        "endMs": 279050
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-06",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "no_room_for_gloom.ogg",
+      "sortOrder": 6,
+      "title": "No Room for Gloom",
+      "genre": "1940s Neo Urban Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36615
+      },
+      "loop2Region": {
+        "startMs": 46491,
+        "endMs": 131012
+      },
+      "fullRegion": {
+        "startMs": 139172,
+        "endMs": 367100
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-07",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "starlight_in_the_shoe.ogg",
+      "sortOrder": 7,
+      "title": "Starlight in the Shoe",
+      "genre": "1940s Gypsy Big Band Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30400
+      },
+      "loop2Region": {
+        "startMs": 40026,
+        "endMs": 83901
+      },
+      "fullRegion": {
+        "startMs": 93115,
+        "endMs": 302730
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "daybreak-shuffle-08",
+      "category": "signature",
+      "subfolder": "UpTime The Daybreak Shuffle",
+      "fileName": "rhythm_and_resolve.ogg",
+      "sortOrder": 8,
+      "title": "Rhythm and Resolve",
+      "genre": "1940s Neo Urban Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 23060
+      },
+      "loop2Region": {
+        "startMs": 31828,
+        "endMs": 96397
+      },
+      "fullRegion": {
+        "startMs": 106136,
+        "endMs": 316320
+      },
+      "journeyId": "daybreak-shuffle"
+    },
+    {
+      "id": "educator-01",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "between_almost_and_yes.ogg",
+      "sortOrder": 7,
+      "title": "Between Almost and Yes",
+      "genre": "",
+      "lufs": -13.79,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 34350
+      },
+      "loop2Region": {
+        "startMs": 44050,
+        "endMs": 125750
+      },
+      "fullRegion": {
+        "startMs": 135650,
+        "endMs": 345540
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-02",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "blueprint_of_the_soul.ogg",
+      "sortOrder": 1,
+      "title": "Blueprint of the Soul",
+      "genre": "",
+      "lufs": -14.26,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 31870
+      },
+      "loop2Region": {
+        "startMs": 40820,
+        "endMs": 94970
+      },
+      "fullRegion": {
+        "startMs": 104050,
+        "endMs": 269460
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-03",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "fires_that_move.ogg",
+      "sortOrder": 5,
+      "title": "Fires That Move",
+      "genre": "",
+      "lufs": -14.33,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30400
+      },
+      "loop2Region": {
+        "startMs": 39450,
+        "endMs": 99250
+      },
+      "fullRegion": {
+        "startMs": 107450,
+        "endMs": 292370
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-04",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "heart_before_the_grade.ogg",
+      "sortOrder": 3,
+      "title": "Heart Before the Grade",
+      "genre": "",
+      "lufs": -15.11,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 37200
+      },
+      "loop2Region": {
+        "startMs": 46650,
+        "endMs": 113350
+      },
+      "fullRegion": {
+        "startMs": 122350,
+        "endMs": 305960
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-05",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "no_barriers_left.ogg",
+      "sortOrder": 6,
+      "title": "No Barriers Left",
+      "genre": "",
+      "lufs": -14.25,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 56150
+      },
+      "loop2Region": {
+        "startMs": 66050,
+        "endMs": 157050
+      },
+      "fullRegion": {
+        "startMs": 165900,
+        "endMs": 334740
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-06",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "the_engine_catching.ogg",
+      "sortOrder": 4,
+      "title": "The Engine Catching",
+      "genre": "",
+      "lufs": -14.55,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 33150
+      },
+      "loop2Region": {
+        "startMs": 42500,
+        "endMs": 126700
+      },
+      "fullRegion": {
+        "startMs": 135000,
+        "endMs": 299020
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-07",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "the_first_true_sentence.ogg",
+      "sortOrder": 8,
+      "title": "The First True Sentence",
+      "genre": "",
+      "lufs": -14.99,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 52500
+      },
+      "loop2Region": {
+        "startMs": 61450,
+        "endMs": 118500
+      },
+      "fullRegion": {
+        "startMs": 128850,
+        "endMs": 334560
+      },
+      "journeyId": "educator"
+    },
+    {
+      "id": "educator-08",
+      "category": "educator",
+      "subfolder": "UpTime The Teacher",
+      "fileName": "timeless_in_the_now.ogg",
+      "sortOrder": 2,
+      "title": "Timeless in the Now",
+      "genre": "",
+      "lufs": -14.01,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 56950
+      },
+      "loop2Region": {
+        "startMs": 68600,
+        "endMs": 171800
+      },
+      "fullRegion": {
+        "startMs": 181450,
+        "endMs": 416940
+      },
+      "journeyId": "educator"
+    }
+  ]
+}

@@ -1,36 +1,7 @@
 import Foundation
 import AVFoundation
 
-// MARK: - Manifest types
-
-struct ManifestRegion: Codable {
-    let startMs: Int
-    let endMs: Int
-}
-
-struct ManifestSongRegions: Codable {
-    let stage1: ManifestRegion
-    let stage2: ManifestRegion
-    let stage3: ManifestRegion
-}
-
-struct ManifestSong: Codable {
-    let id: String
-    let title: String
-    let filename: String
-    let dayNumber: Int
-    let regions: ManifestSongRegions
-}
-
-struct ManifestLibrary: Codable {
-    let title: String
-    let songs: [ManifestSong]
-}
-
-struct AudioManifest: Codable {
-    let version: Int
-    let libraries: [String: ManifestLibrary]
-}
+// Manifest types live in Data/Manifest/UpTimeManifest.swift (Android schema).
 
 // MARK: - AudioPlayerManager
 
@@ -56,7 +27,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var currentRegion: ManifestRegion?
     private var isLooping: Bool = false
     private var onStage3Finished: (() -> Void)?
-    private var manifest: AudioManifest?
+    private var manifest: UpTimeManifest?
 
     // MARK: - Init
 
@@ -85,22 +56,19 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     // MARK: - Manifest
 
-    static func loadManifest() -> AudioManifest? {
-        guard let url = Bundle.main.url(forResource: "manifest", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
-            print("[AudioPlayerManager] manifest.json not found in bundle")
-            return nil
-        }
-        do {
-            return try JSONDecoder().decode(AudioManifest.self, from: data)
-        } catch {
-            print("[AudioPlayerManager] Failed to decode manifest: \(error)")
-            return nil
-        }
+    static func loadManifest() -> UpTimeManifest? {
+        UpTimeManifest.loadFromBundle()
     }
 
-    func song(for libraryId: String, dayNumber: Int) -> ManifestSong? {
-        return manifest?.libraries[libraryId]?.songs.first { $0.dayNumber == dayNumber }
+    /// The song for a journey's 1-based morning number, wrapping round after
+    /// the last song (identity is journeyId; order is manifest sortOrder).
+    func song(forJourneyId journeyId: String, morning: Int) -> ManifestSong? {
+        manifest?.song(forJourneyId: journeyId, morning: morning)
+    }
+
+    /// Songs for a journey in manifest order (for the Player page).
+    func songs(forJourneyId journeyId: String) -> [ManifestSong] {
+        manifest?.songs(forJourneyId: journeyId) ?? []
     }
 
     // MARK: - Playback control

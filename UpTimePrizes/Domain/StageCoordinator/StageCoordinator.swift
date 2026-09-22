@@ -37,7 +37,6 @@ class StageCoordinator: ObservableObject {
     private var audioManager: AudioPlayerManager?
     private var currentFilename: String = ""
     private var currentSubdirectory: String?
-    private var currentRegions: ManifestSongRegions?
 
     // MARK: - Computed
 
@@ -62,9 +61,8 @@ class StageCoordinator: ObservableObject {
     ) {
         self.audioManager = audioManager
         self.currentSong = song
-        self.currentFilename = song.filename
+        self.currentFilename = song.fileStem
         self.currentSubdirectory = subdirectory
-        self.currentRegions = song.regions
         currentStage = .stage1
         playCurrentStage()
     }
@@ -89,14 +87,14 @@ class StageCoordinator: ObservableObject {
         }
     }
 
-    /// Handle the Replay button tap — replay Stage 3 once more.
+    /// Handle the Replay button tap — replay The Prize once more.
     func handleReplay() {
-        guard let regions = currentRegions, let audio = audioManager else { return }
+        guard let song = currentSong, let audio = audioManager else { return }
         currentStage = .stage3
         audio.replay(
             filename: currentFilename,
             subdirectory: currentSubdirectory,
-            region: regions.stage3
+            region: song.fullRegion
         ) { [weak self] in
             Task { @MainActor in
                 self?.currentStage = .replay
@@ -115,26 +113,26 @@ class StageCoordinator: ObservableObject {
     // MARK: - Private playback
 
     private func playCurrentStage() {
-        guard let regions = currentRegions, let audio = audioManager else { return }
+        guard let song = currentSong, let audio = audioManager else { return }
 
         switch currentStage {
         case .stage1:
             audio.playStage1(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
-                region: regions.stage1
+                region: song.loop1Region
             )
         case .stage2:
             audio.playStage2(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
-                region: regions.stage2
+                region: song.loop2Region
             )
         case .stage3:
             audio.playStage3(
                 filename: currentFilename,
                 subdirectory: currentSubdirectory,
-                region: regions.stage3
+                region: song.fullRegion
             ) { [weak self] in
                 Task { @MainActor in
                     self?.advanceStage()

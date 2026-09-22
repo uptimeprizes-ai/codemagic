@@ -14,12 +14,21 @@ import SwiftData
 class StoreKitManager: ObservableObject {
 
     // MARK: - Product ID → Journey ID mapping
+    //
+    // Built from the manifest (single source of truth), never hand-written.
+    // NOTE: the manifest currently carries Android's live Play product IDs.
+    // App Store Connect is its own namespace; which IDs exist there — and
+    // whether iOS follows journey_<name> — is the founder's open ruling.
+    // Until then, no product will resolve on iOS; that is expected.
 
-    static let productJourneyMap: [String: String] = [
-        "journey_overture": "library-a",
-        "journey_cast_prelude": "signature",
-        "journey_catalyst": "special-day"
-    ]
+    static let productJourneyMap: [String: String] = {
+        guard let manifest = UpTimeManifest.loadFromBundle() else { return [:] }
+        var map: [String: String] = [:]
+        for journey in manifest.journeys where !journey.productId.isEmpty {
+            map[journey.productId] = journey.journeyId
+        }
+        return map
+    }()
 
     // MARK: - Published state
 
@@ -127,13 +136,13 @@ class StoreKitManager: ObservableObject {
         // Find the purchased journey
         guard let purchased = journeys.first(where: { $0.id == journeyId }) else { return }
 
-        // Determine new state
+        // Determine new state. Identity is journeyId — never a journey "type".
         let newState: String
-        if purchased.type == "SPECIAL_DAY" {
-            // Catalyst Tracks: immediate full access
+        if purchased.id == "catalyst" {
+            // The Catalyst Tracks: playable immediately, no cycle
             newState = "UNLOCKED_FOR_PLAYBACK"
         } else {
-            // Overture / Cast Prelude: begin daily progression
+            // Journeys with a morning cycle: begin (or resume) progression
             newState = purchased.completedDays >= purchased.totalDays
                 ? "UNLOCKED_FOR_PLAYBACK"
                 : "ACTIVE_IN_PROGRESS"
