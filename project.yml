@@ -21,23 +21,24 @@ targets:
   UpTimePrizes:
     type: application
     platform: iOS
+    # NOTE: XcodeGen targets have NO `resources:` key — a block by that name
+    # is silently ignored, which is exactly how builds #1–21 shipped without
+    # audio (and #20–21 without the manifest). Everything must be declared as
+    # a `sources` entry; xcassets/ttf auto-assign to the resources phase, and
+    # explicit entries below carry `buildPhase: resources`.
+    # Guarded by BundledAudioTests and BundledManifestTests — if packaging
+    # breaks again, the build fails before TestFlight.
     sources:
       - path: UpTimePrizes
         excludes:
           - "Resources/Audio/**"
           - "Resources/uptime_full_manifest.json"
-    resources:
-      - path: UpTimePrizes/Resources/Assets.xcassets
-      # type: folder makes this a folder REFERENCE, copied wholesale into the
-      # bundle as Audio/… — the plain group form silently dropped every audio
-      # file from builds #1–20 (3 MB ipas with no songs). Lookups use
-      # subdirectory "Audio/<journeyId>". Guarded by BundledAudioTests.
+      - path: UpTimePrizes/Resources/uptime_full_manifest.json
+        buildPhase: resources
+      # A folder REFERENCE (type: folder), copied wholesale into the bundle
+      # as Audio/… — lookups use subdirectory "Audio/<journeyId>".
       - path: UpTimePrizes/Resources/Audio
         type: folder
-        buildPhase: resources
-      - path: UpTimePrizes/Resources/Fonts
-        buildPhase: resources
-      - path: UpTimePrizes/Resources/uptime_full_manifest.json
         buildPhase: resources
     settings:
       base:
