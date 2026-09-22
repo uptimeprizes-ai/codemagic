@@ -1,5 +1,6 @@
 import XCTest
 import SwiftData
+import CryptoKit
 @testable import UpTimePrizes
 
 // MARK: - Fixture manifest
@@ -130,14 +131,18 @@ final class ManifestRulesTests: XCTestCase {
     }
 }
 
-// MARK: - Bundled manifest (runs only when the resource is in the test bundle)
+// MARK: - Bundled manifest
+//
+// The test host IS the app, so Bundle.main is the app bundle. If the manifest
+// is missing here, the shipped app is broken — that is a failure, never a skip.
 
 final class BundledManifestTests: XCTestCase {
 
     func testBundledManifestMatchesAndroidCatalog() throws {
-        guard let manifest = UpTimeManifest.loadFromBundle() else {
-            throw XCTSkip("uptime_full_manifest.json not present in this bundle")
-        }
+        let manifest = try XCTUnwrap(
+            UpTimeManifest.loadFromBundle(),
+            "uptime_full_manifest.json is missing from the app bundle — the packaging is broken"
+        )
         XCTAssertGreaterThanOrEqual(manifest.journeys.count, 6, "Expected the full catalog")
         XCTAssertEqual(manifest.songs(forJourneyId: "genesis").count, 5)
         // The placeholder pattern from the June build (0/30000/60000 for every
@@ -147,6 +152,56 @@ final class BundledManifestTests: XCTestCase {
             $0.loop2Region == ManifestRegion(startMs: 30000, endMs: 60000)
         }.count
         XCTAssertEqual(placeholderCount, 0, "Found placeholder regions — real measurements required")
+    }
+}
+
+// MARK: - Bundled audio
+//
+// Builds #1–20 shipped a ~3 MB ipa with NO audio in it — the project config
+// silently dropped every song, and nothing failed. This test makes that
+// impossible to repeat: it resolves each Genesis file through the exact
+// subdirectory the app plays from, and verifies the bytes are the pipeline's
+// approved encodes (SHA-256 from 01_IOS_M4A/genesis/ios_regions.json).
+
+final class BundledAudioTests: XCTestCase {
+
+    private let expected: [(stem: String, sha256: String)] = [
+        ("bright_side_swing", "02a71fd10c0fddf4bafe06c414ef37b3aa6de2a518866bede3601e2fdf5d12b9"),
+        ("the_uptime_swing", "2a823fdc6b4f1c96232250d6a3447d7ae38e94fd54393793db9ed565317922a7"),
+        ("wake_up", "54f0a283694bb0bdd214fb6a82ccd705dfa3c4f9df26334bf2e0943105cc2fad"),
+        ("no_permission", "f71f52f06b0c2adf9dea9519b66fb2dc5b088068ee208d3d60dbd1fbd0af247d"),
+        ("uptime_go_go", "0f68976ffafc923aac82eff58e58857ebefec09390ec17e44f40abc020df208b")
+    ]
+
+    func testAllGenesisAudioIsInTheBundle() throws {
+        for entry in expected {
+            let url = Bundle.main.url(
+                forResource: entry.stem, withExtension: "m4a", subdirectory: "Audio/genesis"
+            )
+            XCTAssertNotNil(url, "\(entry.stem).m4a missing from Audio/genesis — the packaging flaw is back")
+        }
+    }
+
+    func testGenesisAudioIsThePipelinesApprovedEncode() throws {
+        for entry in expected {
+            guard let url = Bundle.main.url(
+                forResource: entry.stem, withExtension: "m4a", subdirectory: "Audio/genesis"
+            ) else { continue } // absence already failed above
+            let data = try Data(contentsOf: url)
+            XCTAssertGreaterThan(data.count, 1_000_000, "\(entry.stem).m4a is implausibly small")
+            let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
+            XCTAssertEqual(digest, entry.sha256, "\(entry.stem).m4a is not the pipeline's approved encode")
+        }
+    }
+
+    func testEveryGenesisManifestSongResolvesToBundledAudio() throws {
+        let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
+        for song in manifest.songs(forJourneyId: "genesis") {
+            let url = Bundle.main.url(
+                forResource: song.fileStem, withExtension: "m4a", subdirectory: "Audio/genesis"
+            )
+            XCTAssertNotNil(url, "Manifest song \(song.id) (\(song.fileStem)) has no bundled audio")
+        }
     }
 }
 

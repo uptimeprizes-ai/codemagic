@@ -45,7 +45,7 @@ class AlarmEngine: ObservableObject {
             let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             return granted
         } catch {
-            print("[AlarmEngine] Notification permission error: \(error)")
+            UpTimeLog.alarm.error("[ALARM] notification permission error: \(error, privacy: .public)")
             return false
         }
     }
@@ -80,7 +80,7 @@ class AlarmEngine: ObservableObject {
             )
             center.add(request) { error in
                 if let error = error {
-                    print("[AlarmEngine] Failed to schedule daily alarm: \(error)")
+                    UpTimeLog.alarm.error("[ALARM] failed to schedule daily alarm: \(error, privacy: .public)")
                 }
             }
         } else {
@@ -99,11 +99,12 @@ class AlarmEngine: ObservableObject {
                 )
                 center.add(request) { error in
                     if let error = error {
-                        print("[AlarmEngine] Failed to schedule alarm for weekday \(weekday): \(error)")
+                        UpTimeLog.alarm.error("[ALARM] failed to schedule weekday \(weekday): \(error, privacy: .public)")
                     }
                 }
             }
         }
+        UpTimeLog.alarm.notice("[ALARM] scheduled \(hour, privacy: .public):\(String(format: "%02d", minute), privacy: .public) repeatDays=\(repeatDays, privacy: .public)")
     }
 
     func cancelAlarm() {
@@ -127,7 +128,7 @@ class AlarmEngine: ObservableObject {
         let hasScheduled = pending.contains { alarmIds.contains($0.identifier) }
 
         if !hasScheduled {
-            print("[AlarmEngine] Alarm was enabled but no pending notification found — re-scheduling.")
+            UpTimeLog.alarm.notice("[ALARM] enabled but nothing pending — re-arming")
             scheduleAlarm(hour: alarm.hour, minute: alarm.minute, repeatDays: alarm.repeatDays)
         }
     }
@@ -176,8 +177,14 @@ class AlarmEngine: ObservableObject {
     func handleAlarmDismissed(audioSounded: Bool, stageAtDismiss: String, reachedPrize: Bool, date: Date = Date()) -> MorningOutcome? {
         defer { isAlarmActive = false }
 
-        guard audioSounded else { return nil } // nothing played → nothing counted
-        guard !hasCountedThisSession else { return nil }
+        guard audioSounded else {
+            UpTimeLog.counting.notice("[MORNING] not counted — audio never sounded")
+            return nil
+        }
+        guard !hasCountedThisSession else {
+            UpTimeLog.counting.notice("[MORNING] not counted — already recorded this session")
+            return nil
+        }
 
         let fetchJourneys = FetchDescriptor<JourneyEntity>()
         guard let journeys = try? context.fetch(fetchJourneys),
@@ -196,9 +203,13 @@ class AlarmEngine: ObservableObject {
             heldStreakOnly: isCatalyst,
             advancedJourney: !isCatalyst
         )
-        guard counted else { return nil } // this calendar day already has its morning
+        guard counted else {
+            UpTimeLog.counting.notice("[MORNING] not counted — this calendar day already has its morning")
+            return nil
+        }
 
         hasCountedThisSession = true
+        UpTimeLog.counting.notice("[MORNING] counted journey=\(active.id, privacy: .public) morning=\(active.completedDays + (isCatalyst ? 0 : 1), privacy: .public)/\(active.totalDays, privacy: .public) stage=\(stageAtDismiss, privacy: .public) heldStreakOnly=\(isCatalyst, privacy: .public)")
 
         if !isCatalyst {
             active.completedDays += 1
@@ -248,11 +259,10 @@ class AlarmEngine: ObservableObject {
     }
 
     /// Bundle subdirectory for a journey's audio. Only The Genesis ships
-    /// inside the app; its files currently live in the legacy Audio/demo
-    /// folder until the pipeline's iOS set replaces them (step 5). Every
-    /// other journey's audio arrives by download.
+    /// inside the app, as a folder reference at Audio/genesis (the pipeline's
+    /// approved iOS set). Every other journey's audio arrives by download.
     func subdirectory(for journeyId: String) -> String? {
-        journeyId == "genesis" ? "demo" : nil
+        journeyId == "genesis" ? "Audio/genesis" : nil
     }
 
     // MARK: - Private helpers
@@ -296,7 +306,7 @@ extension AlarmEngine {
         let request = UNNotificationRequest(identifier: snoozeId, content: content, trigger: trigger)
         center.add(request) { error in
             if let error = error {
-                print("[AlarmEngine] Failed to schedule snooze: \(error)")
+                UpTimeLog.alarm.error("[ALARM] failed to schedule snooze: \(error, privacy: .public)")
             }
         }
 

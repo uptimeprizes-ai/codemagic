@@ -381,7 +381,7 @@ struct PlayerView: View {
     }
 
     private func subdirectory(for journeyId: String) -> String? {
-        journeyId == "genesis" ? "demo" : nil
+        journeyId == "genesis" ? "Audio/genesis" : nil
     }
 }
 

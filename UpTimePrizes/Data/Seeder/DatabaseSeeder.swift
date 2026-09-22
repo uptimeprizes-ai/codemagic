@@ -30,7 +30,7 @@ struct DatabaseSeeder {
 
         guard let data = loadManifestData(),
               let manifest = UpTimeManifest.decode(from: data) else {
-            print("[DatabaseSeeder] Manifest missing or undecodable — nothing seeded.")
+            UpTimeLog.seed.error("[SEED] manifest missing or undecodable — nothing seeded")
             return
         }
 
@@ -103,7 +103,7 @@ struct DatabaseSeeder {
         guard count == 0 || forceRefresh else { return }
 
         if count > 0 {
-            print("[DatabaseSeeder] Manifest fingerprint changed — refreshing all song rows.")
+            UpTimeLog.seed.notice("[SEED] manifest fingerprint changed — refreshing all song rows")
             if let existing = try? context.fetch(fetch) {
                 for song in existing { context.delete(song) }
             }
@@ -171,10 +171,10 @@ struct BackupExclusion {
                 resourceValues.isExcludedFromBackup = true
                 var mutableURL = url
                 try mutableURL.setResourceValues(resourceValues)
-                print("[BackupExclusion] Excluded from iCloud backup: \(url.lastPathComponent)")
+                UpTimeLog.seed.info("[SEED] excluded from iCloud backup: \(url.lastPathComponent, privacy: .public)")
             }
         } catch {
-            print("[BackupExclusion] Could not exclude store from backup: \(error)")
+            UpTimeLog.seed.error("[SEED] backup exclusion failed: \(error, privacy: .public)")
         }
     }
 }

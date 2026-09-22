@@ -50,7 +50,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            print("[AudioPlayerManager] Failed to activate AVAudioSession: \(error)")
+            UpTimeLog.audio.error("[AUDIO] audio session activation failed: \(error, privacy: .public)")
         }
     }
 
@@ -90,7 +90,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         activateAlarmAudioSession()
 
         guard let url = bundleURL(for: filename, subdirectory: subdirectory) else {
-            print("[AudioPlayerManager] Audio file not found: \(filename)")
+            UpTimeLog.audio.error("[AUDIO] file not found: \(filename, privacy: .public)")
             return false
         }
 
@@ -126,9 +126,10 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             }
 
             isPlaying = true
+            UpTimeLog.audio.notice("[AUDIO] playing \(filename, privacy: .public) \(region.startMs, privacy: .public)–\(region.endMs, privacy: .public)ms loop=\(loop, privacy: .public)")
             return true
         } catch {
-            print("[AudioPlayerManager] Failed to create AVAudioPlayer: \(error)")
+            UpTimeLog.audio.error("[AUDIO] player creation failed: \(error, privacy: .public)")
             return false
         }
     }
@@ -208,7 +209,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        print("[AudioPlayerManager] Decode error: \(String(describing: error))")
+        UpTimeLog.audio.error("[AUDIO] decode error: \(String(describing: error), privacy: .public)")
     }
 
     // MARK: - Bundle URL helper
@@ -238,7 +239,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
             p.volume = 1.0
             p.play()
         } catch {
-            print("[AudioPlayerManager] play(filename:subdirectory:) error: \(error)")
+            UpTimeLog.audio.error("[AUDIO] preview play error: \(error, privacy: .public)")
         }
     }
 }

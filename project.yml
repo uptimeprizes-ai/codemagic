@@ -28,7 +28,12 @@ targets:
           - "Resources/uptime_full_manifest.json"
     resources:
       - path: UpTimePrizes/Resources/Assets.xcassets
+      # type: folder makes this a folder REFERENCE, copied wholesale into the
+      # bundle as Audio/… — the plain group form silently dropped every audio
+      # file from builds #1–20 (3 MB ipas with no songs). Lookups use
+      # subdirectory "Audio/<journeyId>". Guarded by BundledAudioTests.
       - path: UpTimePrizes/Resources/Audio
+        type: folder
         buildPhase: resources
       - path: UpTimePrizes/Resources/Fonts
         buildPhase: resources
