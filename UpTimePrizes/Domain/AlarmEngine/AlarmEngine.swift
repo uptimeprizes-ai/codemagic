@@ -52,12 +52,43 @@ class AlarmEngine: ObservableObject {
 
     // MARK: - Schedule
 
-    /// Schedule a local notification for the alarm.
+    /// Schedule the morning alarm. On iOS 26+ with authorization, AlarmKit
+    /// rings it (a real alarm: through the silent switch, snooze at the
+    /// person's gap); otherwise the notification path does. Never both.
     /// - Parameters:
     ///   - hour: Hour in 24h format
     ///   - minute: Minute
     ///   - repeatDays: Array of weekday integers (1 = Sunday … 7 = Saturday). Empty = daily.
     func scheduleAlarm(hour: Int, minute: Int, repeatDays: [Int]) {
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *) {
+            let snooze = snoozeMinutes
+            Task { @MainActor in
+                if await AlarmKitScheduler.requestAuthorization() {
+                    do {
+                        try await AlarmKitScheduler.schedule(
+                            hour: hour, minute: minute,
+                            repeatDays: repeatDays, snoozeMinutes: snooze
+                        )
+                        // AlarmKit owns the morning — clear the notification
+                        // path so the two systems never both fire.
+                        UNUserNotificationCenter.current()
+                            .removePendingNotificationRequests(withIdentifiers: self.allAlarmIdentifiers())
+                        return
+                    } catch {
+                        UpTimeLog.alarm.error("[ALARM] AlarmKit scheduling failed — using notifications: \(error, privacy: .public)")
+                    }
+                }
+                self.scheduleNotificationAlarm(hour: hour, minute: minute, repeatDays: repeatDays)
+            }
+            return
+        }
+        #endif
+        scheduleNotificationAlarm(hour: hour, minute: minute, repeatDays: repeatDays)
+    }
+
+    /// The pre-iOS-26 path: a calendar-triggered local notification.
+    private func scheduleNotificationAlarm(hour: Int, minute: Int, repeatDays: [Int]) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
 
@@ -108,6 +139,11 @@ class AlarmEngine: ObservableObject {
     }
 
     func cancelAlarm() {
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *) {
+            AlarmKitScheduler.cancel()
+        }
+        #endif
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
     }

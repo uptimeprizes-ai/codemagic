@@ -64,6 +64,9 @@ targets:
       path: UpTimePrizes/Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
+        # Shown in the system's AlarmKit permission dialog. Marked placeholder
+        # until the curator rules the sentence.
+        NSAlarmKitUsageDescription: "[COPY PENDING] UpTime Prizes rings your morning alarm."
         UIBackgroundModes:
           - audio
           - fetch
