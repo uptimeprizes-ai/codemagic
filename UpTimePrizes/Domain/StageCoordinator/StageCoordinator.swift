@@ -37,6 +37,14 @@ class StageCoordinator: ObservableObject {
     /// latch is the proof the engine checks at dismissal.
     @Published private(set) var audioSounded: Bool = false
 
+    /// Option B: fired when the current stage's ring limit is reached with
+    /// nobody answering — seven minutes for the Invite and the Nudge, the
+    /// 30-minute backstop for the Prize. The owner decides what happens
+    /// (auto-snooze or stop-and-report) via RingDecision.
+    var onRingLimit: ((String) -> Void)?
+
+    private var ringLimitTimer: Timer?
+
     // MARK: - Private
 
     private var audioManager: AudioPlayerManager?
@@ -55,6 +63,15 @@ class StageCoordinator: ObservableObject {
     }
 
     var stageIndex: Int { currentStage.index }
+
+    /// The rule-vocabulary name for a stage ("invite"/"nudge"/"prize").
+    static func ruleName(for stage: Stage) -> String {
+        switch stage {
+        case .stage1: return "invite"
+        case .stage2: return "nudge"
+        case .stage3, .replay: return "prize"
+        }
+    }
 
     // MARK: - Start alarm
 
@@ -114,15 +131,32 @@ class StageCoordinator: ObservableObject {
     // MARK: - Stop
 
     func stopAlarm() {
+        ringLimitTimer?.invalidate()
+        ringLimitTimer = nil
         audioManager?.stopAll()
         currentStage = .stage1
         currentSong = nil
+    }
+
+    /// Re-arms the ring-limit timer for the current stage. Any person action
+    /// that changes stage re-arms it; stopping the alarm cancels it.
+    private func armRingLimit() {
+        ringLimitTimer?.invalidate()
+        let stageName = Self.ruleName(for: currentStage)
+        let limit = RingDecision.limitSeconds(forStage: stageName)
+        ringLimitTimer = Timer.scheduledTimer(withTimeInterval: limit, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.onRingLimit?(Self.ruleName(for: self.currentStage))
+            }
+        }
     }
 
     // MARK: - Private playback
 
     private func playCurrentStage() {
         guard let song = currentSong, let audio = audioManager else { return }
+        armRingLimit()
 
         switch currentStage {
         case .stage1:

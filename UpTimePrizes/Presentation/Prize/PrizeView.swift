@@ -27,6 +27,21 @@ extension AlarmEngine.MorningOutcome {
     }
 
     var prizeMessage: String {
+        // Curator, 2026-09-23: a morning nobody answered leads the message,
+        // before anything else — and where the line underneath carries a
+        // fact of its own (a completed journey, a Catalyst day), the two
+        // STACK, unheard line first. The experience lines ("the UpTime
+        // swing", "tomorrow brings another song") describe a person who was
+        // there, so an unheard morning never wears them.
+        if wasUnanswered {
+            if journeyComplete {
+                return CuratorCopy.prizeMessageUnheard + "\n\n" + CuratorCopy.prizeMessageJourneyComplete
+            }
+            if heldStreakOnly {
+                return CuratorCopy.prizeMessageUnheard + "\n\n" + CuratorCopy.prizeMessageCatalystOrFallback
+            }
+            return CuratorCopy.prizeMessageUnheard
+        }
         if heldStreakOnly {
             return CuratorCopy.prizeMessageCatalystOrFallback
         }

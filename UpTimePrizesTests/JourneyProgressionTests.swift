@@ -533,6 +533,24 @@ final class SnoozeRulesTests: XCTestCase {
         try context.save()
         XCTAssertEqual(engine.consumeResumeStage(), "invite")
     }
+
+    func testAutoSnoozeIsMarkedUsedAndResetsOnAFreshMorning() throws {
+        XCTAssertFalse(engine.autoSnoozeUsed)
+
+        engine.autoSnooze(stageAtSnooze: "invite")
+        XCTAssertTrue(engine.autoSnoozeUsed, "One auto-snooze per alarm, persisted")
+
+        let alarm = try XCTUnwrap(try context.fetch(FetchDescriptor<AlarmEntity>()).first)
+        XCTAssertEqual(alarm.resumeStage, "nudge", "Auto-snooze rides the same path as a person's snooze")
+
+        // The snooze return (resumes at the Nudge) must NOT reset the allowance…
+        XCTAssertEqual(engine.consumeResumeStage(), "nudge")
+        XCTAssertTrue(engine.autoSnoozeUsed)
+
+        // …but the next fresh morning (starting at the Invite) does.
+        XCTAssertEqual(engine.consumeResumeStage(), "invite")
+        XCTAssertFalse(engine.autoSnoozeUsed)
+    }
 }
 
 // MARK: - Streak rules (§2.4)
@@ -607,11 +625,13 @@ final class PrizeCopyTests: XCTestCase {
 
     private func outcome(
         title: String = "The Genesis", morning: Int = 3, total: Int = 9,
-        complete: Bool = false, reachedPrize: Bool = false, heldOnly: Bool = false
+        complete: Bool = false, reachedPrize: Bool = false, heldOnly: Bool = false,
+        unanswered: Bool = false
     ) -> AlarmEngine.MorningOutcome {
         AlarmEngine.MorningOutcome(
             journeyTitle: title, morningNumber: morning, totalDays: total,
-            journeyComplete: complete, reachedPrize: reachedPrize, heldStreakOnly: heldOnly
+            journeyComplete: complete, reachedPrize: reachedPrize, heldStreakOnly: heldOnly,
+            wasUnanswered: unanswered
         )
     }
 
@@ -641,6 +661,54 @@ final class PrizeCopyTests: XCTestCase {
 
     func testMessageCatalystWinsOverEverything() {
         XCTAssertEqual(outcome(complete: true, reachedPrize: true, heldOnly: true).prizeMessage, CuratorCopy.prizeMessageCatalystOrFallback)
+    }
+
+    // Curator, 2026-09-23: the unheard morning leads; fact-lines stack under it.
+
+    func testUnheardMorningLeadsAlone() {
+        XCTAssertEqual(outcome(unanswered: true).prizeMessage, CuratorCopy.prizeMessageUnheard)
+    }
+
+    func testUnheardStacksWithJourneyComplete() {
+        XCTAssertEqual(
+            outcome(complete: true, unanswered: true).prizeMessage,
+            CuratorCopy.prizeMessageUnheard + "\n\n" + CuratorCopy.prizeMessageJourneyComplete
+        )
+    }
+
+    func testUnheardNeverWearsTheExperienceLines() {
+        // "The UpTime swing" describes a person who was there; an unheard
+        // morning must never claim it, even when the Prize region played out.
+        XCTAssertFalse(outcome(reachedPrize: true, unanswered: true).prizeMessage
+            .contains(CuratorCopy.prizeMessagePrizeReached))
+    }
+}
+
+// MARK: - Option B ring decisions (founder, 2026-09-15)
+
+final class RingDecisionTests: XCTestCase {
+
+    func testInviteUnansweredAutoSnoozesOnce() {
+        XCTAssertEqual(RingDecision.onRingLimitReached(stage: "invite", autoSnoozeUsed: false), .autoSnooze)
+    }
+
+    func testInviteAfterUsedAutoSnoozeStops() {
+        XCTAssertEqual(RingDecision.onRingLimitReached(stage: "invite", autoSnoozeUsed: true), .stopAndReport)
+    }
+
+    func testNudgeUnansweredStopsAndCounts() {
+        XCTAssertEqual(RingDecision.onRingLimitReached(stage: "nudge", autoSnoozeUsed: false), .stopAndReport)
+        XCTAssertEqual(RingDecision.onRingLimitReached(stage: "nudge", autoSnoozeUsed: true), .stopAndReport)
+    }
+
+    func testPrizeIsNeverCutShortByTheSevenMinuteRule() {
+        XCTAssertEqual(RingDecision.onRingLimitReached(stage: "prize", autoSnoozeUsed: false), .keepRinging)
+    }
+
+    func testLimitsAreSevenMinutesAndTheThirtyMinuteBackstop() {
+        XCTAssertEqual(RingDecision.limitSeconds(forStage: "invite"), 7 * 60)
+        XCTAssertEqual(RingDecision.limitSeconds(forStage: "nudge"), 7 * 60)
+        XCTAssertEqual(RingDecision.limitSeconds(forStage: "prize"), 30 * 60)
     }
 }
 

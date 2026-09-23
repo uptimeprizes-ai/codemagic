@@ -118,6 +118,32 @@ struct ContentView: View {
                     if newValue {
                         prizeOutcome = nil
                         engine.beginAlarmSession()
+                        // Option B: what happens when a ring goes unanswered.
+                        stageCoordinator.onRingLimit = { stage in
+                            switch RingDecision.onRingLimitReached(stage: stage, autoSnoozeUsed: engine.autoSnoozeUsed) {
+                            case .autoSnooze:
+                                engine.autoSnooze(stageAtSnooze: stage)
+                                stageCoordinator.stopAlarm()
+                                showAlarm = false
+                            case .stopAndReport:
+                                // The morning counts, because it sounded. The
+                                // Prize screen leads with the unheard line.
+                                let outcome = engine.handleAlarmDismissed(
+                                    audioSounded: stageCoordinator.audioSounded,
+                                    stageAtDismiss: "autoSilence",
+                                    reachedPrize: stage == "prize",
+                                    wasUnanswered: true
+                                )
+                                stageCoordinator.stopAlarm()
+                                if let outcome {
+                                    prizeOutcome = outcome
+                                } else {
+                                    showAlarm = false
+                                }
+                            case .keepRinging:
+                                break
+                            }
+                        }
                         if let song = engine.currentSong(from: audioManager) {
                             let sub = engine.subdirectory(for: song.journeyId)
                             // A snooze return resumes one stage further (§2.1).

@@ -123,6 +123,10 @@ final class AlarmEntity {
     var resumeStage: String = "invite"
     var resumeStageValidUntil: Date = Date.distantPast
 
+    /// One auto-snooze per alarm (Option B), persisted because the process
+    /// can die between rings. Reset when a fresh morning's session begins.
+    var autoSnoozeUsed: Bool = false
+
     init(hour: Int = 7, minute: Int = 0, isEnabled: Bool = false, repeatDays: [Int] = [], snoozeMinutes: Int = 10) {
         self.hour = hour
         self.minute = minute

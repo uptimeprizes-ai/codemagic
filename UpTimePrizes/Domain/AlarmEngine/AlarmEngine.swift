@@ -162,6 +162,7 @@ class AlarmEngine: ObservableObject {
         let journeyComplete: Bool
         let reachedPrize: Bool
         let heldStreakOnly: Bool // Catalyst morning (later: Genesis fallback)
+        let wasUnanswered: Bool  // the alarm ended itself — nobody answered
     }
 
     /// Called when the user dismisses the alarm (any stage), or auto-silence
@@ -174,7 +175,7 @@ class AlarmEngine: ObservableObject {
     /// - one recorded morning per alarm session (session latch);
     /// - a Catalyst morning holds the streak and advances no journey;
     /// - the morning index keeps moving after completion, wrapping at lookup.
-    func handleAlarmDismissed(audioSounded: Bool, stageAtDismiss: String, reachedPrize: Bool, date: Date = Date()) -> MorningOutcome? {
+    func handleAlarmDismissed(audioSounded: Bool, stageAtDismiss: String, reachedPrize: Bool, wasUnanswered: Bool = false, date: Date = Date()) -> MorningOutcome? {
         defer { isAlarmActive = false }
 
         guard audioSounded else {
@@ -241,7 +242,8 @@ class AlarmEngine: ObservableObject {
             totalDays: active.totalDays,
             journeyComplete: !isCatalyst && active.completedDays >= active.totalDays,
             reachedPrize: reachedPrize,
-            heldStreakOnly: isCatalyst
+            heldStreakOnly: isCatalyst,
+            wasUnanswered: wasUnanswered
         )
     }
 
@@ -345,13 +347,34 @@ extension AlarmEngine {
 
     /// The stage the next alarm session should start at: the snoozed-in stage
     /// if the resume is still valid, otherwise the Invite. Consumes the
-    /// resume either way.
+    /// resume either way, and a fresh morning (starting at the Invite) also
+    /// resets the one-per-alarm auto-snooze allowance.
     func consumeResumeStage() -> String {
         guard let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first else { return "invite" }
         let stage = Date() < alarm.resumeStageValidUntil ? alarm.resumeStage : "invite"
         alarm.resumeStage = "invite"
         alarm.resumeStageValidUntil = Date.distantPast
+        if stage == "invite" {
+            alarm.autoSnoozeUsed = false // a snooze return never resumes at the Invite
+        }
         try? context.save()
         return stage
+    }
+
+    // MARK: - Option B ring limits
+
+    var autoSnoozeUsed: Bool {
+        (try? context.fetch(FetchDescriptor<AlarmEntity>()).first)?.autoSnoozeUsed ?? false
+    }
+
+    /// The app snoozing for the person: same path as their own snooze
+    /// (§2.1), plus the persisted one-per-alarm mark.
+    func autoSnooze(stageAtSnooze: String) {
+        if let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first {
+            alarm.autoSnoozeUsed = true
+            try? context.save()
+        }
+        UpTimeLog.alarm.notice("[ALARM] ring limit — auto-snoozing once")
+        snoozeAlarm(stageAtSnooze: stageAtSnooze)
     }
 }
