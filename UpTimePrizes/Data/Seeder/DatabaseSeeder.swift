@@ -50,7 +50,7 @@ struct DatabaseSeeder {
     // MARK: - Journeys
 
     @MainActor
-    private static func syncJourneys(from manifest: UpTimeManifest, context: ModelContext) {
+    static func syncJourneys(from manifest: UpTimeManifest, context: ModelContext) {
         let existing = (try? context.fetch(FetchDescriptor<JourneyEntity>())) ?? []
         let existingById = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
         let manifestIds = Set(manifest.journeys.map { $0.journeyId })
@@ -67,6 +67,14 @@ struct DatabaseSeeder {
                 row.productId = mj.productId
                 row.entitlementId = mj.entitlementId
                 row.isPurchaseOffered = !mj.productId.isEmpty
+                // Nine-mornings rule (founder, 2026-09-15): when a journey's
+                // cycle grows, a finished journey must never re-lock — it keeps
+                // reading complete, so its count rises with its total (8/8 → 9/9).
+                // In-progress journeys keep their real count and simply have
+                // further to go.
+                if row.purchaseState == "UNLOCKED_FOR_PLAYBACK" && row.completedDays < mj.totalDays {
+                    row.completedDays = mj.totalDays
+                }
             } else {
                 let isGenesis = mj.journeyId == "genesis"
                 context.insert(JourneyEntity(

@@ -19,7 +19,7 @@ private let fixtureManifestJSON = """
     { "journeyId": "genesis", "title": "The Genesis", "category": "demo", "totalDays": 9,
       "productId": "", "price": "Free", "description": "d", "sortOrder": 0,
       "packName": "", "framingLine": "f", "entitlementId": "" },
-    { "journeyId": "cast-prelude", "title": "The Cast Prelude", "category": "signature", "totalDays": 8,
+    { "journeyId": "cast-prelude", "title": "The Cast Prelude", "category": "signature", "totalDays": 9,
       "productId": "com.uptime.prizes.signature", "price": "$2.99", "description": "d", "sortOrder": 1,
       "packName": "signature", "framingLine": "f", "entitlementId": "" }
   ],
@@ -435,6 +435,47 @@ final class JourneyProgressionTests: XCTestCase {
         for j in try context.fetch(FetchDescriptor<JourneyEntity>()) {
             XCTAssertEqual(j.completedDays, 0)
         }
+    }
+
+    // MARK: Nine mornings (founder, 2026-09-15; Android 49/50 parity)
+
+    func testDiscoverOpensAfterNinthCountedMorningNotEighth() throws {
+        // The gate reads COUNTED mornings, never "the day you are on" —
+        // Android opened a morning early by reading the latter.
+        for _ in 0..<8 { dismissMorning() }
+        var demo = try context.fetch(FetchDescriptor<DemoStateEntity>()).first
+        XCTAssertFalse(demo?.isPurchaseOffered ?? true, "Eight counted mornings must not open Discover")
+
+        dismissMorning() // the ninth
+        demo = try context.fetch(FetchDescriptor<DemoStateEntity>()).first
+        XCTAssertTrue(demo?.isPurchaseOffered ?? false, "The ninth counted morning opens Discover")
+    }
+
+    func testJourneyLengthResyncNeverRelocksAndRidesCountUp() throws {
+        // Simulate a device that finished The Cast Prelude at 8/8 before the
+        // manifest grew the cycle to 9 (and one journey still in progress).
+        let fetch = FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "cast-prelude" })
+        let finished = try XCTUnwrap(try context.fetch(fetch).first)
+        finished.purchaseState = "UNLOCKED_FOR_PLAYBACK"
+        finished.completedDays = 8
+        finished.totalDays = 8
+
+        let genesisFetch = FetchDescriptor<JourneyEntity>(predicate: #Predicate { $0.id == "genesis" })
+        let inProgress = try XCTUnwrap(try context.fetch(genesisFetch).first)
+        inProgress.completedDays = 3
+        try context.save()
+
+        let manifest = try XCTUnwrap(UpTimeManifest.decode(from: Data(fixtureManifestJSON.utf8)))
+        DatabaseSeeder.syncJourneys(from: manifest, context: context)
+
+        // Finished journey: never re-locks; its count rises with its total.
+        XCTAssertEqual(finished.totalDays, 9)
+        XCTAssertEqual(finished.completedDays, 9, "8/8 must read 9/9, still complete")
+        XCTAssertEqual(finished.purchaseState, "UNLOCKED_FOR_PLAYBACK")
+
+        // In-progress journey: real count preserved, simply further to go.
+        XCTAssertEqual(inProgress.totalDays, 9)
+        XCTAssertEqual(inProgress.completedDays, 3)
     }
 }
 

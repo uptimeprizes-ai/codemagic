@@ -25,6 +25,14 @@ enum CuratorCopy {
         "A song for today. Your journey is exactly where you left it."
     static let prizeContinue = "Continue" // §2.5: "Continue" returns to the app
 
+    /// Curator, 2026-09-23 — a morning nobody answered leads the message,
+    /// before anything else, and where the line underneath carries a fact of
+    /// its own the two STACK (unheard line first) rather than one replacing
+    /// the other. Wired in the missed-morning pass; the words land now so no
+    /// one ever writes their own.
+    static let prizeMessageUnheard =
+        "That one played without you. The morning still counts."
+
     // MARK: Claim (§2.8) — used by the gift path when it lands
 
     static func claimSuccess(journeyTitle: String) -> String {
