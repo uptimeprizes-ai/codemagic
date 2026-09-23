@@ -10,12 +10,12 @@ final class JourneyEntity {
     @Attribute(.unique) var id: String // journeyId, e.g. "genesis", "cast-prelude"
     var title: String
     var descriptionText: String
-    var framingLine: String
+    var framingLine: String = ""
     var totalDays: Int
-    var sortOrder: Int
-    var packName: String
-    var productId: String
-    var entitlementId: String
+    var sortOrder: Int = 0
+    var packName: String = ""
+    var productId: String = ""
+    var entitlementId: String = ""
     var isPurchaseOffered: Bool
     var isActive: Bool
     var purchaseState: String // "NOT_OWNED", "ACTIVE_IN_PROGRESS", "UNLOCKED_FOR_PLAYBACK"
@@ -47,9 +47,9 @@ final class JourneyEntity {
 final class SongEntity {
     @Attribute(.unique) var id: String
     var title: String
-    var journeyId: String
-    var sortOrder: Int
-    var fileStem: String // file name without extension; iOS plays <stem>.m4a
+    var journeyId: String = ""
+    var sortOrder: Int = 0
+    var fileStem: String = "" // file name without extension; iOS plays <stem>.m4a
     var isAvailable: Bool
 
     init(id: String, title: String, journeyId: String, sortOrder: Int, fileStem: String, isAvailable: Bool) {

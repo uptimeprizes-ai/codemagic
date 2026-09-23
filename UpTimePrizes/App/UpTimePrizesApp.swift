@@ -29,7 +29,22 @@ struct UpTimePrizesApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [config])
         } catch {
-            fatalError("Failed to create ModelContainer: \(error)")
+            // A store that cannot migrate must never crash-loop an alarm app
+            // (builds 119→122 did exactly that). Every row is either a
+            // projection of the manifest or reseedable device state, so the
+            // recovery is: delete the store, start fresh, reseed on launch.
+            UpTimeLog.seed.error("[SEED] store failed to load — deleting and reseeding: \(error, privacy: .public)")
+            let fm = FileManager.default
+            if let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                for suffix in ["default.store", "default.store-shm", "default.store-wal"] {
+                    try? fm.removeItem(at: appSupport.appendingPathComponent(suffix))
+                }
+            }
+            do {
+                return try ModelContainer(for: schema, configurations: [config])
+            } catch {
+                fatalError("Failed to create ModelContainer even after store reset: \(error)")
+            }
         }
     }()
 
