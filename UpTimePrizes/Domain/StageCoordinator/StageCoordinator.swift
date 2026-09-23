@@ -58,18 +58,21 @@ class StageCoordinator: ObservableObject {
 
     // MARK: - Start alarm
 
-    /// Begin the alarm experience for a given song.
+    /// Begin the alarm experience for a given song. A snooze return starts
+    /// one stage further (§2.1) via `startingAt`; a fresh alarm starts at
+    /// the Invite.
     func startAlarm(
         song: ManifestSong,
         subdirectory: String?,
-        audioManager: AudioPlayerManager
+        audioManager: AudioPlayerManager,
+        startingAt stage: Stage = .stage1
     ) {
         self.audioManager = audioManager
         self.currentSong = song
         self.currentFilename = song.fileStem
         self.currentSubdirectory = subdirectory
         audioSounded = false
-        currentStage = .stage1
+        currentStage = stage
         playCurrentStage()
     }
 

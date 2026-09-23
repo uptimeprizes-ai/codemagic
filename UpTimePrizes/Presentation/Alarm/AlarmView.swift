@@ -12,6 +12,7 @@ struct AlarmView: View {
 
     @Environment(\.modelContext) private var context
     @Query private var journeys: [JourneyEntity]
+    @Query private var alarms: [AlarmEntity]
 
     // MARK: - Observed
 
@@ -151,7 +152,7 @@ struct AlarmView: View {
         Button {
             onSnooze()
         } label: {
-            Text("Snooze \(AlarmEngine.snoozeDurationMinutes) min")
+            Text("Snooze \(alarms.first?.snoozeMinutes ?? AlarmEngine.defaultSnoozeMinutes) min")
                 .font(.custom("PlayfairDisplay-Regular", size: 15))
                 .foregroundColor(Color("ink").opacity(0.5))
                 .padding(.vertical, 12)

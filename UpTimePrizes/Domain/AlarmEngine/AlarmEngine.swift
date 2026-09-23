@@ -282,23 +282,51 @@ class AlarmEngine: ObservableObject {
 
 extension AlarmEngine {
 
-    /// Default snooze duration in minutes
-    static let snoozeDurationMinutes: Int = 9
+    /// The snooze options the person can choose from (§2.5). Default 10.
+    static let snoozeOptions = [5, 10, 15, 20, 30]
+    static let defaultSnoozeMinutes = 10
 
-    /// Snooze the alarm: stop audio, schedule a one-time notification
-    /// snoozeDurationMinutes from now, and dismiss the alarm UI.
-    func snoozeAlarm() {
+    /// Snooze returns one stage further (§2.1): snooze in the Invite and the
+    /// Nudge comes back; snooze in the Nudge and the Prize comes back.
+    /// There is no Snooze in the Prize stage.
+    static func stageAfterSnooze(_ stage: String) -> String {
+        switch stage {
+        case "invite": return "nudge"
+        case "nudge": return "prize"
+        default: return stage
+        }
+    }
+
+    /// The person's chosen snooze gap, from the alarm row.
+    var snoozeMinutes: Int {
+        let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first
+        return alarm?.snoozeMinutes ?? Self.defaultSnoozeMinutes
+    }
+
+    /// Snooze the alarm: stop audio, remember which stage comes back and for
+    /// how long that memory is valid, and schedule the return notification at
+    /// the person's own gap.
+    func snoozeAlarm(stageAtSnooze: String) {
+        let minutes = snoozeMinutes
+
+        // Persist the resume stage — consumed once by the next session, valid
+        // only through the snooze window plus a grace period, so a stale
+        // resume can never leak into the next morning.
+        if let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first {
+            alarm.resumeStage = Self.stageAfterSnooze(stageAtSnooze)
+            alarm.resumeStageValidUntil = Date().addingTimeInterval(TimeInterval((minutes + 5) * 60))
+            try? context.save()
+        }
+
         let center = UNUserNotificationCenter.current()
-
         let content = UNMutableNotificationContent()
         content.title = Self.placeholderAlarmTitle
         content.body = Self.placeholderAlarmBody
         content.sound = UNNotificationSound.default
         content.userInfo = ["type": "alarm"]
 
-        // Fire once after snooze duration
         let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: TimeInterval(Self.snoozeDurationMinutes * 60),
+            timeInterval: TimeInterval(minutes * 60),
             repeats: false
         )
         let snoozeId = "\(Self.alarmNotificationIdentifier).snooze"
@@ -309,8 +337,21 @@ extension AlarmEngine {
                 UpTimeLog.alarm.error("[ALARM] failed to schedule snooze: \(error, privacy: .public)")
             }
         }
+        UpTimeLog.alarm.notice("[ALARM] snoozed \(minutes, privacy: .public) min — \(Self.stageAfterSnooze(stageAtSnooze), privacy: .public) comes back")
 
         isAlarmActive = false
-        // Note: snooze does NOT increment completedDays — only Dismiss does
+        // Note: snooze does NOT count a morning — only a dismissal can.
+    }
+
+    /// The stage the next alarm session should start at: the snoozed-in stage
+    /// if the resume is still valid, otherwise the Invite. Consumes the
+    /// resume either way.
+    func consumeResumeStage() -> String {
+        guard let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first else { return "invite" }
+        let stage = Date() < alarm.resumeStageValidUntil ? alarm.resumeStage : "invite"
+        alarm.resumeStage = "invite"
+        alarm.resumeStageValidUntil = Date.distantPast
+        try? context.save()
+        return stage
     }
 }

@@ -110,11 +110,24 @@ final class AlarmEntity {
     var minute: Int
     var isEnabled: Bool
     var repeatDays: [Int] // 1 = Sunday, 7 = Saturday
-    
-    init(hour: Int = 7, minute: Int = 0, isEnabled: Bool = false, repeatDays: [Int] = []) {
+
+    /// The person's snooze gap (§2.5): 5/10/15/20/30 minutes, default 10.
+    /// Used by their own snooze and, later, by auto-snooze and AlarmKit.
+    /// Inline default = migration-safe for stores that predate the field.
+    var snoozeMinutes: Int = 10
+
+    /// Snooze returns one stage further (§2.1): snooze in the Invite and the
+    /// Nudge comes back; snooze in the Nudge and the Prize comes back.
+    /// Consumed once when the next alarm session starts, and only while
+    /// still valid — a stale resume must never leak into the next morning.
+    var resumeStage: String = "invite"
+    var resumeStageValidUntil: Date = Date.distantPast
+
+    init(hour: Int = 7, minute: Int = 0, isEnabled: Bool = false, repeatDays: [Int] = [], snoozeMinutes: Int = 10) {
         self.hour = hour
         self.minute = minute
         self.isEnabled = isEnabled
         self.repeatDays = repeatDays
+        self.snoozeMinutes = snoozeMinutes
     }
 }

@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Query private var journeys: [JourneyEntity]
     @Query private var demoStates: [DemoStateEntity]
+    @Query private var alarms: [AlarmEntity]
 
     // MARK: - Observed
 
@@ -27,6 +28,25 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Snooze (§2.5): 5/10/15/20/30 minutes, default 10.
+                Section {
+                    Picker("Snooze", selection: Binding(
+                        get: { alarms.first?.snoozeMinutes ?? AlarmEngine.defaultSnoozeMinutes },
+                        set: { newValue in
+                            alarms.first?.snoozeMinutes = newValue
+                            try? context.save()
+                        }
+                    )) {
+                        ForEach(AlarmEngine.snoozeOptions, id: \.self) { minutes in
+                            Text("\(minutes) minutes").tag(minutes)
+                        }
+                    }
+                } header: {
+                    Text("Alarm")
+                } footer: {
+                    Text(CuratorCopy.snoozeSubtitle)
+                }
+
                 // Active journey section
                 Section("Active Journey") {
                     if let journey = activeJourney {

@@ -479,6 +479,62 @@ final class JourneyProgressionTests: XCTestCase {
     }
 }
 
+// MARK: - Snooze rules (§2.1, §2.5)
+
+@MainActor
+final class SnoozeRulesTests: XCTestCase {
+
+    var container: ModelContainer!
+    var context: ModelContext!
+    var engine: AlarmEngine!
+
+    override func setUpWithError() throws {
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        container = try ModelContainer(for: schema, configurations: [config])
+        context = ModelContext(container)
+        context.insert(AlarmEntity())
+        try context.save()
+        engine = AlarmEngine(context: context)
+    }
+
+    func testSnoozeReturnsOneStageFurther() {
+        XCTAssertEqual(AlarmEngine.stageAfterSnooze("invite"), "nudge")
+        XCTAssertEqual(AlarmEngine.stageAfterSnooze("nudge"), "prize")
+        // There is no Snooze in the Prize stage; the mapping must not move it.
+        XCTAssertEqual(AlarmEngine.stageAfterSnooze("prize"), "prize")
+    }
+
+    func testDefaultSnoozeIsTenMinutes() {
+        XCTAssertEqual(engine.snoozeMinutes, 10)
+        XCTAssertEqual(AlarmEngine.snoozeOptions, [5, 10, 15, 20, 30])
+    }
+
+    func testSnoozePersistsResumeStageWithValidity() throws {
+        engine.snoozeAlarm(stageAtSnooze: "invite")
+        let alarm = try XCTUnwrap(try context.fetch(FetchDescriptor<AlarmEntity>()).first)
+        XCTAssertEqual(alarm.resumeStage, "nudge")
+        XCTAssertGreaterThan(alarm.resumeStageValidUntil, Date())
+    }
+
+    func testResumeIsConsumedOnceAndOnlyWhileValid() throws {
+        let alarm = try XCTUnwrap(try context.fetch(FetchDescriptor<AlarmEntity>()).first)
+
+        // Valid resume: returned once, then reset.
+        alarm.resumeStage = "nudge"
+        alarm.resumeStageValidUntil = Date().addingTimeInterval(600)
+        try context.save()
+        XCTAssertEqual(engine.consumeResumeStage(), "nudge")
+        XCTAssertEqual(engine.consumeResumeStage(), "invite", "A resume must be consumed exactly once")
+
+        // Expired resume: a stale snooze must never leak into the next morning.
+        alarm.resumeStage = "prize"
+        alarm.resumeStageValidUntil = Date().addingTimeInterval(-60)
+        try context.save()
+        XCTAssertEqual(engine.consumeResumeStage(), "invite")
+    }
+}
+
 // MARK: - Streak rules (§2.4)
 
 @MainActor

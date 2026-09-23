@@ -107,7 +107,7 @@ struct ContentView: View {
                                 }
                             },
                             onSnooze: {
-                                engine.snoozeAlarm()
+                                engine.snoozeAlarm(stageAtSnooze: stageName(for: stageCoordinator.currentStage))
                                 stageCoordinator.stopAlarm()
                                 showAlarm = false
                             }
@@ -120,7 +120,13 @@ struct ContentView: View {
                         engine.beginAlarmSession()
                         if let song = engine.currentSong(from: audioManager) {
                             let sub = engine.subdirectory(for: song.journeyId)
-                            stageCoordinator.startAlarm(song: song, subdirectory: sub, audioManager: audioManager)
+                            // A snooze return resumes one stage further (§2.1).
+                            stageCoordinator.startAlarm(
+                                song: song,
+                                subdirectory: sub,
+                                audioManager: audioManager,
+                                startingAt: stage(forName: engine.consumeResumeStage())
+                            )
                         }
                     }
                 }
@@ -185,6 +191,14 @@ struct ContentView: View {
         case .stage1: return "invite"
         case .stage2: return "nudge"
         case .stage3, .replay: return "prize"
+        }
+    }
+
+    private func stage(forName name: String) -> StageCoordinator.Stage {
+        switch name {
+        case "nudge": return .stage2
+        case "prize": return .stage3
+        default: return .stage1
         }
     }
 
