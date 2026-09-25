@@ -42,6 +42,9 @@ enum CuratorCopy {
     // MARK: Missed alarm (§2.7) — used by the missed-alarm pass when it lands
 
     static let missedAlarmTitle = "Missed alarm"
+    /// Ruled 2026-09-17 but NO LONGER TRUE: founder ruling 2026-09-25 -
+    /// an unanswered alarm does not count. Kept only as the record of the
+    /// retired line; never shown. See placeholderMissedAlarmSoundedBody.
     static let missedAlarmSoundedBody = "The alarm sounded. The morning counts."
     static let missedAlarmSilentBody = "The alarm did not sound. Your phone may have blocked it."
 
@@ -72,4 +75,6 @@ enum CuratorCopy {
 
     static let placeholderAlarmNotificationTitle = "[COPY PENDING] Alarm"
     static let placeholderAlarmNotificationBody = "[COPY PENDING] Open UpTime Prizes to begin the morning."
+    /// "Sounded, nobody answered, not counted" - the curator's line is owed.
+    static let placeholderMissedAlarmSoundedBody = "[COPY PENDING] The alarm sounded. No one answered."
 }

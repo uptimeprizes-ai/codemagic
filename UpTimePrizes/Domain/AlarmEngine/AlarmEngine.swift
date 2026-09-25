@@ -60,6 +60,9 @@ class AlarmEngine: ObservableObject {
     ///   - minute: Minute
     ///   - repeatDays: Array of weekday integers (1 = Sunday … 7 = Saturday). Empty = daily.
     func scheduleAlarm(hour: Int, minute: Int, repeatDays: [Int]) {
+        // Anchors the unattended-morning check: no morning before the alarm
+        // existed in this form is ever judged (routine re-arming keeps it).
+        AlarmRingLog.recordArmed(hour: hour, minute: minute, repeatDays: repeatDays)
         #if canImport(AlarmKit)
         if #available(iOS 26.0, *) {
             let snooze = snoozeMinutes
@@ -194,9 +197,70 @@ class AlarmEngine: ObservableObject {
     private var hasCountedThisSession = false
 
     /// Call when a new alarm session begins (the alarm UI is presented).
+    /// The in-app session owns this morning from here, so it also marks the
+    /// latest ring as answered for the unattended-morning check.
     func beginAlarmSession() {
         hasCountedThisSession = false
         isAlarmActive = true
+        AlarmRingLog.recordAnswered()
+    }
+
+    enum UnattendedResult {
+        case missed(sounded: Bool)
+        case nothing
+    }
+
+    /// Ends an in-app session that nobody answered (the Option B stop).
+    /// Founder ruling 2026-09-25: an unanswered alarm does not count - no
+    /// journey progress, no streak - so nothing is recorded; the morning is
+    /// only reported as missed.
+    func endUnansweredSession() {
+        isAlarmActive = false
+        UpTimeLog.counting.notice("[MORNING] not counted — nobody answered")
+    }
+
+    /// At launch and on every return to the foreground: find the most recent
+    /// AlarmKit morning that nobody answered (see UnattendedMorning) and
+    /// report it, once. It is never counted (founder ruling 2026-09-25). Only
+    /// AlarmKit mornings qualify, because only they can say whether the
+    /// alarm actually sounded.
+    func checkUnattendedMorning(now: Date = Date()) -> UnattendedResult {
+        #if canImport(AlarmKit)
+        guard #available(iOS 26.0, *), AlarmKitScheduler.isAuthorized else { return .nothing }
+        guard let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first,
+              alarm.isEnabled else { return .nothing }
+
+        let occurrence = UnattendedMorning.mostRecentOccurrence(
+            before: now, hour: alarm.hour, minute: alarm.minute, repeatDays: alarm.repeatDays
+        )
+        let ledger = MorningLedger(context: context)
+        let recorded = occurrence.map { ledger.hasRecord(dayKey: MorningLedger.dayKey(for: $0)) } ?? false
+        let verdict = UnattendedMorning.evaluate(
+            now: now,
+            occurrence: occurrence,
+            armedSince: AlarmRingLog.armedSince,
+            lastSnoozeReturnAt: AlarmRingLog.lastSnoozeReturnAt,
+            lastAnsweredAt: AlarmRingLog.lastAnsweredAt,
+            bootTime: AlarmRingLog.bootTime(),
+            alreadyRecorded: recorded,
+            alreadyEvaluated: occurrence.map(AlarmRingLog.wasEvaluated) ?? false
+        )
+
+        switch verdict {
+        case .none:
+            return .nothing
+        case .didNotSound(let occurrence):
+            AlarmRingLog.markEvaluated(occurrence)
+            UpTimeLog.counting.notice("[MORNING] missed — the alarm did not sound (phone was off); not counted")
+            return .missed(sounded: false)
+        case .soundedUnanswered(let occurrence):
+            AlarmRingLog.markEvaluated(occurrence)
+            UpTimeLog.counting.notice("[MORNING] missed — the alarm sounded, nobody answered; not counted")
+            return .missed(sounded: true)
+        }
+        #else
+        return .nothing
+        #endif
     }
 
     /// Everything the Prize screen needs about a counted morning.
@@ -375,6 +439,7 @@ extension AlarmEngine {
             Task { @MainActor in
                 do {
                     try await AlarmKitScheduler.scheduleSnoozeReturn(after: minutes)
+                    AlarmRingLog.recordSnoozeReturn(at: Date().addingTimeInterval(TimeInterval(minutes * 60)))
                 } catch {
                     UpTimeLog.alarm.error("[ALARM] snooze return via AlarmKit failed — using a notification")
                     self.scheduleSnoozeNotification(minutes: minutes)

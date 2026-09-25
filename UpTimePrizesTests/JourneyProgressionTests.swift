@@ -693,6 +693,105 @@ final class PrizeCopyTests: XCTestCase {
     }
 }
 
+// MARK: - Unanswered mornings (founder ruling 2026-09-25: never counted)
+
+final class UnattendedMorningTests: XCTestCase {
+
+    private let cal = Calendar(identifier: .gregorian)
+    private func date(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
+        cal.date(from: DateComponents(timeZone: .current, year: 2026, month: 9, day: day, hour: hour, minute: minute))!
+    }
+
+    // 2026-09-25 is a Friday (weekday 6).
+    func testMostRecentOccurrenceIsTodayWhenPassed() {
+        let now = date(25, 10, 0)
+        XCTAssertEqual(UnattendedMorning.mostRecentOccurrence(before: now, hour: 7, minute: 0, repeatDays: [], calendar: cal), date(25, 7, 0))
+    }
+
+    func testMostRecentOccurrenceIsYesterdayWhenNotYetDue() {
+        let now = date(25, 6, 0)
+        XCTAssertEqual(UnattendedMorning.mostRecentOccurrence(before: now, hour: 7, minute: 0, repeatDays: [], calendar: cal), date(24, 7, 0))
+    }
+
+    func testMostRecentOccurrenceHonoursRepeatDays() {
+        // Weekdays only (Mon=2 … Fri=6); from Sunday 27th the last is Friday 25th.
+        let now = date(27, 10, 0)
+        XCTAssertEqual(UnattendedMorning.mostRecentOccurrence(before: now, hour: 7, minute: 0, repeatDays: [2, 3, 4, 5, 6], calendar: cal), date(25, 7, 0))
+    }
+
+    private func verdict(
+        now: Date, occurrence: Date? , armedSince: Date? = nil, snooze: Date? = nil,
+        answered: Date? = nil, boot: Date? = nil, recorded: Bool = false, evaluated: Bool = false
+    ) -> UnattendedMorning.Verdict {
+        UnattendedMorning.evaluate(
+            now: now, occurrence: occurrence,
+            armedSince: armedSince ?? date(1, 0, 0),
+            lastSnoozeReturnAt: snooze, lastAnsweredAt: answered, bootTime: boot,
+            alreadyRecorded: recorded, alreadyEvaluated: evaluated
+        )
+    }
+
+    func testRangAndNobodyAnsweredIsReportedSoundedNotCounted() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t), .soundedUnanswered(occurrence: t))
+    }
+
+    func testPhoneOffAtRingTimeIsReportedDidNotSound() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t, boot: date(25, 8, 0)), .didNotSound(occurrence: t))
+    }
+
+    func testAnsweredRingIsNeverReported() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t, answered: date(25, 7, 1)), .none)
+    }
+
+    func testAnsweredThenSnoozeReturnUnansweredIsReported() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(
+            verdict(now: date(25, 9, 0), occurrence: t, snooze: date(25, 7, 11), answered: date(25, 7, 1)),
+            .soundedUnanswered(occurrence: t)
+        )
+    }
+
+    func testNothingIsJudgedWhileTheRingMayStillBeGoing() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 7, 20), occurrence: t), .none)
+    }
+
+    func testAMorningFromBeforeTheAlarmExistedIsNeverJudged() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 12, 0), occurrence: t, armedSince: date(25, 11, 0)), .none)
+    }
+
+    func testRecordedOrAlreadyReportedMorningsAreSkipped() {
+        let t = date(25, 7, 0)
+        XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t, recorded: true), .none)
+        XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t, evaluated: true), .none)
+    }
+}
+
+@MainActor
+final class UnansweredNeverCountsTests: XCTestCase {
+
+    /// The in-app Option B stop ends the session without recording anything:
+    /// no journey progress, no streak (founder ruling 2026-09-25).
+    func testEndingAnUnansweredSessionRecordsNoMorning() throws {
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+        let engine = AlarmEngine(context: context)
+
+        engine.beginAlarmSession()
+        engine.endUnansweredSession()
+
+        XCTAssertFalse(engine.isAlarmActive)
+        XCTAssertEqual(MorningLedger(context: context).soundedMorningsCount(), 0)
+        XCTAssertEqual(MorningLedger(context: context).streak(), 0)
+    }
+}
+
 // MARK: - AlarmKit Dismiss → the morning
 
 final class PendingMorningStartTests: XCTestCase {
@@ -752,7 +851,7 @@ final class RingDecisionTests: XCTestCase {
         XCTAssertEqual(RingDecision.onRingLimitReached(stage: "invite", autoSnoozeUsed: true), .stopAndReport)
     }
 
-    func testNudgeUnansweredStopsAndCounts() {
+    func testNudgeUnansweredStopsAndReportsNeverCounts() {
         XCTAssertEqual(RingDecision.onRingLimitReached(stage: "nudge", autoSnoozeUsed: false), .stopAndReport)
         XCTAssertEqual(RingDecision.onRingLimitReached(stage: "nudge", autoSnoozeUsed: true), .stopAndReport)
     }

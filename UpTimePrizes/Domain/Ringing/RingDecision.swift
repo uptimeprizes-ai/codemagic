@@ -9,7 +9,8 @@ import Foundation
 //   Ring        | Nobody answers for 7 minutes
 //   ------------|--------------------------------------------------------
 //   The Invite  | Auto-snooze ONCE, at the person's own gap. Nudge returns.
-//   The Nudge   | Stop. The morning counts, because it sounded. Report.
+//   The Nudge   | Stop and report it missed. Does NOT count (founder
+//               | ruling 2026-09-25: no engagement, no credit).
 //   The Prize   | Untouched — plays out and waits, until a 30-min backstop.
 //
 // One auto-snooze per alarm, persisted — the process can die between rings.
@@ -19,7 +20,7 @@ import Foundation
 enum RingAction: Equatable {
     case keepRinging
     case autoSnooze     // through the SAME path as a person's own snooze
-    case stopAndReport  // the morning counts (it sounded); report it
+    case stopAndReport  // stop; report the morning missed - never counted
 }
 
 enum RingDecision {

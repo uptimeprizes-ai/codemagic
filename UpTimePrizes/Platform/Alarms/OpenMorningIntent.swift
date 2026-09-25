@@ -29,6 +29,7 @@ struct OpenMorningIntent: LiveActivityIntent {
         // ringing; stopping the other is a harmless no-op.
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.alarmUUID)
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.snoozeUUID)
+        AlarmRingLog.recordAnswered()
         PendingMorningStart.record()
         await MainActor.run {
             UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed — opening the morning")

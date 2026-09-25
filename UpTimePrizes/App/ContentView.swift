@@ -62,6 +62,8 @@ struct ContentView: View {
     @State private var alarmEngine: AlarmEngine?
     @State private var isSeeded: Bool = false
     @State private var prizeOutcome: AlarmEngine.MorningOutcome?
+    @State private var showMissedAlarm: Bool = false
+    @State private var missedSounded: Bool = true
     @StateObject private var notificationDelegate = NotificationDelegate()
     @Environment(\.requestReview) private var requestReview
 
@@ -126,20 +128,14 @@ struct ContentView: View {
                                 stageCoordinator.stopAlarm()
                                 showAlarm = false
                             case .stopAndReport:
-                                // The morning counts, because it sounded. The
-                                // Prize screen leads with the unheard line.
-                                let outcome = engine.handleAlarmDismissed(
-                                    audioSounded: stageCoordinator.audioSounded,
-                                    stageAtDismiss: "autoSilence",
-                                    reachedPrize: stage == "prize",
-                                    wasUnanswered: true
-                                )
+                                // Founder ruling 2026-09-25: nobody answered,
+                                // so the morning does NOT count - no progress,
+                                // no streak, no Prize screen. It is reported.
+                                engine.endUnansweredSession()
                                 stageCoordinator.stopAlarm()
-                                if let outcome {
-                                    prizeOutcome = outcome
-                                } else {
-                                    showAlarm = false
-                                }
+                                showAlarm = false
+                                missedSounded = true
+                                showMissedAlarm = true
                             case .keepRinging:
                                 break
                             }
@@ -162,6 +158,7 @@ struct ContentView: View {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         startPendingMorningIfAny()
+                        judgeUnattendedMorning()
                         Task {
                             await engine.verifyAndRescheduleIfNeeded()
                         }
@@ -176,6 +173,17 @@ struct ContentView: View {
         }
         .task {
             await setup()
+        }
+        // A missed morning is reported once, in the app (§2.3). It never
+        // counts (founder ruling 2026-09-25). "Did not sound" is the
+        // curator's ruled line; "sounded, unanswered" awaits new copy,
+        // because the ruled line ("The morning counts.") is no longer true.
+        .alert(CuratorCopy.missedAlarmTitle, isPresented: $showMissedAlarm) {
+            Button(CuratorCopy.prizeContinue, role: .cancel) {}
+        } message: {
+            Text(missedSounded
+                 ? CuratorCopy.placeholderMissedAlarmSoundedBody
+                 : CuratorCopy.missedAlarmSilentBody)
         }
     }
 
@@ -213,6 +221,19 @@ struct ContentView: View {
         // A Dismiss on the AlarmKit lock screen that cold-launched the app
         // left a start request; the UI is ready now, so honour it.
         startPendingMorningIfAny()
+        judgeUnattendedMorning()
+    }
+
+    /// Reports the most recent AlarmKit morning nobody answered, once.
+    private func judgeUnattendedMorning() {
+        guard let engine = alarmEngine, !showAlarm, !showMissedAlarm else { return }
+        switch engine.checkUnattendedMorning() {
+        case .missed(let sounded):
+            missedSounded = sounded
+            showMissedAlarm = true
+        case .nothing:
+            break
+        }
     }
 
     /// Starts the in-app morning if an AlarmKit Dismiss asked for it.
