@@ -61,6 +61,7 @@ struct PrizeView: View {
     let outcome: AlarmEngine.MorningOutcome
     /// The song this morning played; nil hides the star.
     var songId: String? = nil
+    var songTitle: String = ""
     var onContinue: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -87,58 +88,91 @@ struct PrizeView: View {
     }
 
     // MARK: - Body
+    //
+    // Layout from Android's PrizeRevealScreen: an eyebrow, the song's title
+    // with its star, the journey badge, the curator's message, the star
+    // hint, and Continue.
 
     var body: some View {
         ZStack {
-            Color("paper")
-                .ignoresSafeArea()
+            PaperBackground()
 
             VStack(spacing: 0) {
-                Spacer()
-
-                Text(headerText)
-                    .font(.custom("PlayfairDisplay-SemiBold", size: 14))
-                    .foregroundColor(Color("brass"))
-                    .tracking(2)
-                    .textCase(.uppercase)
+                Text("Your melody for this morning")
+                    .font(.playfair(13))
+                    .foregroundColor(BrassPaper.inkSoft)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
 
-                Spacer().frame(height: 28)
+                Spacer().frame(height: 16)
 
-                Text(messageText)
-                    .font(.custom("PlayfairDisplay-SemiBold", size: 26))
-                    .foregroundColor(Color("ink"))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 36)
-
-                if songId != nil {
-                    Spacer().frame(height: 28)
-                    Button(action: toggleStar) {
-                        Image(systemName: isStarred ? "star.fill" : "star")
-                            .font(.system(size: 30))
-                            .foregroundColor(Color("brass"))
+                HStack(spacing: 12) {
+                    if !songTitle.isEmpty {
+                        Text(songTitle)
+                            .font(.playfair(27, semibold: true))
+                            .foregroundColor(BrassPaper.ink)
+                            .multilineTextAlignment(.center)
                     }
-                    .buttonStyle(.plain)
+                    if songId != nil {
+                        StarButton(isStarred: isStarred, action: toggleStar)
+                    }
                 }
 
-                Spacer()
+                Spacer().frame(height: 12)
 
-                Button {
-                    onContinue()
-                } label: {
-                    Text(CuratorCopy.prizeContinue)
-                        .font(.custom("PlayfairDisplay-SemiBold", size: 17))
-                        .foregroundColor(Color("paper"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color("brass"))
-                        .clipShape(RoundedRectangle(cornerRadius: 30))
-                        .padding(.horizontal, 32)
+                Text(headerText)
+                    .font(.playfair(13))
+                    .foregroundColor(Color(argb: 0xFFF8F1DE))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(argb: 0xFFD7BD88), Color(argb: 0xFF8E6E3C)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .clipShape(Capsule())
+
+                Spacer().frame(height: 32)
+
+                Text(messageText)
+                    .font(.playfair(16))
+                    .lineSpacing(7)
+                    .foregroundColor(BrassPaper.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if songId != nil {
+                    Spacer().frame(height: 16)
+                    Text(isStarred ? "★ Starred — find it in your favorites" : "Tap ☆ to star this song")
+                        .font(.playfair(12))
+                        .foregroundColor(isStarred ? BrassPaper.brassHighlight : BrassPaper.inkSoft)
+                        .multilineTextAlignment(.center)
                 }
 
                 Spacer().frame(height: 48)
+
+                Button(action: onContinue) {
+                    Text(CuratorCopy.prizeContinue)
+                        .font(.playfair(14, semibold: true))
+                        .foregroundColor(Color(argb: 0xFFFFF8E8))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(argb: 0xFFD7C08F), Color(argb: 0xFF9B7B48)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
+            .padding(32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .statusBarHidden(true)
     }

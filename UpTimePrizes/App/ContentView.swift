@@ -63,8 +63,12 @@ struct ContentView: View {
     @State private var isSeeded: Bool = false
     @State private var prizeOutcome: AlarmEngine.MorningOutcome?
     @State private var prizeSongId: String?
+    @State private var prizeSongTitle: String = ""
+    @State private var snoozeReturnAt: Date?
     @State private var showMissedAlarm: Bool = false
     @State private var missedSounded: Bool = true
+    /// Android WelcomePage: shown once, before the main interface.
+    @AppStorage("com.uptimeprizes.welcomeSeen") private var welcomeSeen: Bool = false
     @StateObject private var notificationDelegate = NotificationDelegate()
     @Environment(\.requestReview) private var requestReview
 
@@ -83,8 +87,13 @@ struct ContentView: View {
                     // The Prize screen is presented inside the same cover as
                     // the alarm, so the alarm screen can never close before
                     // the Prize screen renders (Android bug guard 1, §2.5).
-                    if let outcome = prizeOutcome {
-                        PrizeView(outcome: outcome, songId: prizeSongId) {
+                    if let returnAt = snoozeReturnAt {
+                        SnoozeConfirmationView(returnAt: returnAt) {
+                            snoozeReturnAt = nil
+                            showAlarm = false
+                        }
+                    } else if let outcome = prizeOutcome {
+                        PrizeView(outcome: outcome, songId: prizeSongId, songTitle: prizeSongTitle) {
                             prizeOutcome = nil
                             showAlarm = false
                             maybeRequestReview()
@@ -97,6 +106,7 @@ struct ContentView: View {
                                 // Captured before stopAlarm clears it: the
                                 // Prize screen offers a star for this song.
                                 prizeSongId = stageCoordinator.currentSong?.id
+                                prizeSongTitle = stageCoordinator.currentSong?.title ?? ""
                                 let stage = stageCoordinator.currentStage
                                 let outcome = engine.handleAlarmDismissed(
                                     audioSounded: stageCoordinator.audioSounded,
@@ -115,7 +125,8 @@ struct ContentView: View {
                             onSnooze: {
                                 engine.snoozeAlarm(stageAtSnooze: stageName(for: stageCoordinator.currentStage))
                                 stageCoordinator.stopAlarm()
-                                showAlarm = false
+                                // "Rest a little longer." for three seconds, then back to the app.
+                                snoozeReturnAt = Date().addingTimeInterval(TimeInterval(engine.snoozeMinutes * 60))
                             }
                         )
                     }
@@ -123,6 +134,7 @@ struct ContentView: View {
                 .onChange(of: showAlarm) { _, newValue in
                     if newValue {
                         prizeOutcome = nil
+                        snoozeReturnAt = nil
                         engine.beginAlarmSession()
                         // Option B: what happens when a ring goes unanswered.
                         stageCoordinator.onRingLimit = { stage in
@@ -172,7 +184,12 @@ struct ContentView: View {
                 ProgressView()
                     .tint(Color("brass"))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color("paper").ignoresSafeArea())
+                    .background(PaperBackground())
+            }
+        }
+        .overlay {
+            if !welcomeSeen {
+                WelcomeView { welcomeSeen = true }
             }
         }
         .task {
