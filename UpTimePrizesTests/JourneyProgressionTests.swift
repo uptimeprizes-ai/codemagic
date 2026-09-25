@@ -693,6 +693,61 @@ final class PrizeCopyTests: XCTestCase {
     }
 }
 
+// MARK: - What the Player shows (Android screen map, 2026-09-25)
+
+final class CatalogRulesTests: XCTestCase {
+
+    private func j(_ id: String, total: Int = 9, done: Int = 0, active: Bool = false,
+                   state: String = "NOT_OWNED", order: Int = 0) -> CatalogRules.JourneyFacts {
+        CatalogRules.JourneyFacts(id: id, totalDays: total, completedDays: done, isActive: active,
+                                  purchaseState: state, sortOrder: order)
+    }
+
+    func testCatalogHiddenUntilTheNinthCountedMorning() {
+        let journeys = [j("genesis", done: 8, active: true, state: "ACTIVE_IN_PROGRESS")]
+        XCTAssertTrue(CatalogRules.catalogRows(journeys, genesisCompletedDays: 8).isEmpty)
+        XCTAssertEqual(CatalogRules.catalogRows(journeys, genesisCompletedDays: 9).map(\.id), ["genesis"])
+    }
+
+    func testCatalogIsGenesisFirstThenOwnedInSortOrderNeverUnowned() {
+        let journeys = [
+            j("warm-front", state: "ACTIVE_IN_PROGRESS", order: 2),
+            j("overture", state: "NOT_OWNED", order: 6),
+            j("genesis", done: 9, state: "UNLOCKED_FOR_PLAYBACK", order: 0),
+            j("cast-prelude", state: "UNLOCKED_FOR_PLAYBACK", order: 1)
+        ]
+        XCTAssertEqual(CatalogRules.catalogRows(journeys, genesisCompletedDays: 9).map(\.id),
+                       ["genesis", "cast-prelude", "warm-front"])
+    }
+
+    func testSongsOnlyWhenFinishedExceptCatalystWhenOwned() {
+        XCTAssertFalse(CatalogRules.songsVisible(j("warm-front", done: 4, state: "ACTIVE_IN_PROGRESS")))
+        XCTAssertTrue(CatalogRules.songsVisible(j("warm-front", done: 9, state: "UNLOCKED_FOR_PLAYBACK")))
+        XCTAssertTrue(CatalogRules.songsVisible(j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK")))
+        XCTAssertFalse(CatalogRules.songsVisible(j("catalyst", total: 5, state: "NOT_OWNED")))
+    }
+
+    func testRowPills() {
+        XCTAssertEqual(CatalogRules.rowPill(j("genesis", state: "ACTIVE_IN_PROGRESS")), "Free")
+        XCTAssertEqual(CatalogRules.rowPill(j("genesis", done: 3, state: "ACTIVE_IN_PROGRESS")), "Day 4 of 9")
+        XCTAssertEqual(CatalogRules.rowPill(j("genesis", done: 9, state: "UNLOCKED_FOR_PLAYBACK")), "Complete")
+        XCTAssertEqual(CatalogRules.rowPill(j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK")), "Owned")
+        XCTAssertEqual(CatalogRules.rowPill(j("warm-front", done: 2, active: true, state: "ACTIVE_IN_PROGRESS")), "Day 3 of 9")
+        XCTAssertEqual(CatalogRules.rowPill(j("warm-front", done: 2, active: false, state: "ACTIVE_IN_PROGRESS")), "Owned")
+    }
+
+    func testDayPillNeverPrintsPastTheEndAndCompleteStandsAlone() {
+        XCTAssertEqual(CatalogRules.dayPill(j("genesis", done: 3, state: "ACTIVE_IN_PROGRESS")), "DAY 4 / 9")
+        XCTAssertEqual(CatalogRules.dayPill(j("genesis", done: 33, state: "UNLOCKED_FOR_PLAYBACK")), "COMPLETE")
+    }
+
+    func testDiscoverCountdownLine() {
+        XCTAssertEqual(DiscoverView.countdownLine(remaining: 8), "Eight more mornings…")
+        XCTAssertEqual(DiscoverView.countdownLine(remaining: 2), "Two more mornings…")
+        XCTAssertEqual(DiscoverView.countdownLine(remaining: 1), "Tomorrow.")
+    }
+}
+
 // MARK: - Unanswered mornings (founder ruling 2026-09-25: never counted)
 
 final class UnattendedMorningTests: XCTestCase {

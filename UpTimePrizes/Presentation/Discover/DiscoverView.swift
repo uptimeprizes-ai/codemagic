@@ -72,29 +72,31 @@ struct DiscoverView: View {
                 .font(.system(size: 40))
                 .foregroundColor(Color("brass"))
 
-            Text("Your morning experience is just beginning.")
+            // Screen map §4 (shipping Android copy): before the ninth counted
+            // Genesis morning, a placeholder and a countdown — never a price,
+            // a product name, or a track count.
+            Text("The catalog opens on day nine.")
                 .font(.custom("PlayfairDisplay-SemiBold", size: 20))
                 .foregroundColor(Color("ink"))
                 .multilineTextAlignment(.center)
 
-            let completed = demoState?.completedDays ?? 0
-            let remaining = max(0, 9 - completed)
-
-            Text("Complete \(remaining) more morning\(remaining == 1 ? "" : "s") with The Genesis to unlock the full catalog.")
+            Text(Self.countdownLine(remaining: max(0, 9 - (demoState?.completedDays ?? 0))))
                 .font(.custom("PlayfairDisplay-Regular", size: 15))
                 .foregroundColor(Color("ink").opacity(0.7))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
-
-            ProgressView(value: Double(completed), total: 9)
-                .tint(Color("brass"))
-                .padding(.horizontal, 32)
-
-            Text("\(completed) of 9 mornings")
-                .font(.custom("PlayfairDisplay-Regular", size: 13))
-                .foregroundColor(Color("ink").opacity(0.5))
         }
         .padding(.horizontal, 16)
+    }
+
+    /// "Eight more mornings…", counting down to "Tomorrow." (screen map §4).
+    static func countdownLine(remaining: Int) -> String {
+        if remaining <= 1 { return "Tomorrow." }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .spellOut
+        formatter.locale = Locale(identifier: "en_US")
+        let word = formatter.string(from: NSNumber(value: remaining)) ?? "\(remaining)"
+        return String(word.prefix(1)).uppercased() + String(word.dropFirst()) + " more mornings…"
     }
 
     // MARK: - Unlocked content

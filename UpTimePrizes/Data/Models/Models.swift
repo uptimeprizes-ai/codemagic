@@ -87,6 +87,20 @@ final class MorningRecordEntity {
     }
 }
 
+/// A song the person starred from the Prize screen (screen map §3.4).
+/// Kept apart from SongEntity on purpose: song rows are deleted and reseeded
+/// whenever the manifest changes, and a favourite must survive that.
+@Model
+final class StarredSongEntity {
+    @Attribute(.unique) var songId: String
+    var starredAt: Date
+
+    init(songId: String, starredAt: Date = Date()) {
+        self.songId = songId
+        self.starredAt = starredAt
+    }
+}
+
 @Model
 final class DemoStateEntity {
     @Attribute(.unique) var id: String = "demo_state"

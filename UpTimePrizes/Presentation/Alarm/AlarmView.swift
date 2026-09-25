@@ -66,7 +66,7 @@ struct AlarmView: View {
                 Spacer()
 
                 // Replay button (Stage 3 finished)
-                if stageCoordinator.currentStage == .replay {
+                if stageCoordinator.currentStage == .replay && stageCoordinator.replayAvailable {
                     replayButton
                     Spacer().frame(height: 20)
                 }

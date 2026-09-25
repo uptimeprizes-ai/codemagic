@@ -14,9 +14,10 @@ struct HomeView: View {
                     Label("Home", systemImage: "house.fill")
                 }
 
-            PlayerView(alarmEngine: alarmEngine, audioManager: audioManager)
+            // Play what you own. Setting the alarm lives on Settings.
+            PlayerView(audioManager: audioManager)
                 .tabItem {
-                    Label("Alarm", systemImage: "alarm.fill")
+                    Label("Player", systemImage: "record.circle")
                 }
 
             DiscoverView(storeKit: storeKit)

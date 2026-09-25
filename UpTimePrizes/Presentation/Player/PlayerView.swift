@@ -1,47 +1,52 @@
 import SwiftUI
-import AVFoundation
 import SwiftData
 
 // MARK: - PlayerView
+//
+// The Player tab: play what you already own (Android screen map §3). It
+// never sells anything and never shows a journey you do not own. Setting
+// the alarm lives on Settings; buying lives on Discover.
+//
+// Top to bottom: the day pill, what is playing now, the CATALOG (hidden
+// until the ninth counted Genesis morning), STARRED, and the footer. A
+// journey's songs appear only once it is finished — except the Catalyst
+// Tracks, listed the moment they are owned (see CatalogRules).
+//
+// Still to come, awaiting the App Builder's exact composition: the full
+// Morning Prize card (waveform, scrubber, skip, journey ring).
 
-/// The Player tab — shows the alarm card with time picker and enable/disable toggle,
-/// and lists songs for journeys that are UNLOCKED_FOR_PLAYBACK.
 struct PlayerView: View {
-
-    // MARK: - Environment
 
     @Environment(\.modelContext) private var context
     @Query private var journeys: [JourneyEntity]
-    @Query private var alarms: [AlarmEntity]
     @Query private var songs: [SongEntity]
+    @Query(sort: \StarredSongEntity.starredAt) private var starred: [StarredSongEntity]
+    @Query private var demoStates: [DemoStateEntity]
 
-    // MARK: - Observed
-
-    @ObservedObject var alarmEngine: AlarmEngine
     @ObservedObject var audioManager: AudioPlayerManager
 
-    // MARK: - State
-
-    @State private var showTimePicker: Bool = false
-    @State private var selectedHour: Int = 7
-    @State private var selectedMinute: Int = 0
-    @State private var selectedRepeatDays: Set<Int> = []
-    @State private var playingPreviewId: String? = nil
+    @State private var playingSongId: String?
 
     // MARK: - Computed
 
-    private var alarm: AlarmEntity? { alarms.first }
+    private var genesisCompletedDays: Int { demoStates.first?.completedDays ?? 0 }
 
-    private var activeJourney: JourneyEntity? {
-        journeys.first(where: { $0.isActive })
+    private var activeJourney: JourneyEntity? { journeys.first(where: { $0.isActive }) }
+
+    private var catalogRows: [CatalogRules.JourneyFacts] {
+        CatalogRules.catalogRows(
+            journeys.map { CatalogRules.JourneyFacts($0) },
+            genesisCompletedDays: genesisCompletedDays
+        )
     }
 
-    private var unlockedJourneys: [JourneyEntity] {
-        journeys.filter { $0.purchaseState == "UNLOCKED_FOR_PLAYBACK" }
+    private var starredSongs: [SongEntity] {
+        starred.compactMap { star in songs.first(where: { $0.id == star.songId }) }
     }
 
-    private var catalystJourney: JourneyEntity? {
-        journeys.first(where: { $0.id == "catalyst" && $0.purchaseState == "UNLOCKED_FOR_PLAYBACK" })
+    private var playingSong: SongEntity? {
+        guard let id = playingSongId else { return nil }
+        return songs.first(where: { $0.id == id })
     }
 
     // MARK: - Body
@@ -49,15 +54,20 @@ struct PlayerView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    alarmCard
-                    journeyProgressCard
-                    if !unlockedJourneys.isEmpty {
-                        unlockedSongsSection
+                VStack(alignment: .leading, spacing: 24) {
+                    if let journey = activeJourney {
+                        dayPill(for: journey)
                     }
-                    if catalystJourney != nil {
-                        catalystSection
+                    if let song = playingSong {
+                        nowPlayingCard(song)
                     }
+                    if !catalogRows.isEmpty {
+                        catalogSection
+                    }
+                    if !starredSongs.isEmpty {
+                        starredSection
+                    }
+                    footer
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -67,323 +77,195 @@ struct PlayerView: View {
             .navigationTitle("Player")
             .navigationBarTitleDisplayMode(.large)
         }
-        .onAppear {
-            if let alarm = alarm {
-                selectedHour = alarm.hour
-                selectedMinute = alarm.minute
-                selectedRepeatDays = Set(alarm.repeatDays)
-            }
+        .onChange(of: audioManager.isPlaying) { _, playing in
+            if !playing { playingSongId = nil }
         }
-        .sheet(isPresented: $showTimePicker) {
-            timePickerSheet
-        }
+        .onDisappear { stop() }
     }
 
-    // MARK: - Alarm card
+    // MARK: - Day pill
 
-    private var alarmCard: some View {
-        VStack(spacing: 0) {
-            // Time display
-            Button {
-                showTimePicker = true
-            } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(formattedTime)
-                        .font(.custom("PlayfairDisplay-SemiBold", size: 52))
-                        .foregroundColor(Color("ink"))
-                    Text(amPmLabel)
-                        .font(.custom("PlayfairDisplay-Regular", size: 20))
-                        .foregroundColor(Color("ink").opacity(0.6))
-                        .padding(.bottom, 6)
+    private func dayPill(for journey: JourneyEntity) -> some View {
+        Text(CatalogRules.dayPill(CatalogRules.JourneyFacts(journey)))
+            .font(.custom("PlayfairDisplay-SemiBold", size: 13))
+            .tracking(2)
+            .foregroundColor(Color("brass"))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .overlay(Capsule().stroke(Color("brass"), lineWidth: 1))
+    }
+
+    // MARK: - Now playing
+
+    private func nowPlayingCard(_ song: SongEntity) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("NOW PLAYING")
+                .font(.custom("PlayfairDisplay-SemiBold", size: 12))
+                .tracking(2)
+                .foregroundColor(Color("brass"))
+            HStack(spacing: 14) {
+                Button { stop() } label: {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(Color("brass"))
                 }
-            }
-            .buttonStyle(.plain)
-
-            Spacer().frame(height: 16)
-
-            // Repeat days
-            repeatDaysRow
-
-            Spacer().frame(height: 20)
-
-            // Enable toggle
-            HStack {
-                Text(alarm?.isEnabled == true ? "Alarm on" : "Alarm off")
-                    .font(.custom("PlayfairDisplay-Regular", size: 15))
-                    .foregroundColor(Color("ink").opacity(0.7))
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { alarm?.isEnabled ?? false },
-                    set: { enabled in
-                        toggleAlarm(enabled: enabled)
-                    }
-                ))
-                .tint(Color("brass"))
+                .buttonStyle(.plain)
+                Text(song.title)
+                    .font(.custom("PlayfairDisplay-SemiBold", size: 20))
+                    .foregroundColor(Color("ink"))
             }
         }
-        .padding(24)
-        .background(Color.white.opacity(0.6))
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.7))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color("ink").opacity(0.06), radius: 8, x: 0, y: 2)
     }
 
-    // MARK: - Journey progress card
+    // MARK: - Catalog
 
-    private var journeyProgressCard: some View {
-        Group {
-            if let journey = activeJourney {
+    private var catalogSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionHeader("CATALOG")
+            ForEach(catalogRows, id: \.id) { row in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(journey.title)
-                        .font(.custom("PlayfairDisplay-SemiBold", size: 17))
-                        .foregroundColor(Color("ink"))
-
-                    if journey.purchaseState == "ACTIVE_IN_PROGRESS" {
-                        let progress = Double(journey.completedDays) / Double(journey.totalDays)
-                        VStack(alignment: .leading, spacing: 6) {
-                            ProgressView(value: progress)
-                                .tint(Color("brass"))
-                            Text("Day \(journey.completedDays) of \(journey.totalDays)")
-                                .font(.custom("PlayfairDisplay-Regular", size: 13))
-                                .foregroundColor(Color("ink").opacity(0.6))
-                        }
-                    } else if journey.purchaseState == "UNLOCKED_FOR_PLAYBACK" {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(Color("brass"))
-                            Text("Library unlocked for free playback")
-                                .font(.custom("PlayfairDisplay-Regular", size: 13))
-                                .foregroundColor(Color("ink").opacity(0.7))
+                    HStack {
+                        Text(title(for: row.id))
+                            .font(.custom("PlayfairDisplay-SemiBold", size: 17))
+                            .foregroundColor(Color("ink"))
+                        Spacer()
+                        statePill(CatalogRules.rowPill(row))
+                    }
+                    if CatalogRules.songsVisible(row) {
+                        ForEach(journeySongs(row.id), id: \.id) { song in
+                            songRow(song, showsUnstar: false)
                         }
                     }
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
                 .background(Color.white.opacity(0.6))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: Color("ink").opacity(0.06), radius: 8, x: 0, y: 2)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
     }
 
-    // MARK: - Unlocked songs section
+    // MARK: - Starred
 
-    private var unlockedSongsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(unlockedJourneys, id: \.id) { journey in
-                if journey.id != "catalyst" {
-                    let journeySongs = songs
-                        .filter { $0.journeyId == journey.id && $0.isAvailable }
-                        .sorted { $0.sortOrder < $1.sortOrder }
-
-                    if !journeySongs.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(journey.title)
-                                .font(.custom("PlayfairDisplay-SemiBold", size: 15))
-                                .foregroundColor(Color("ink"))
-
-                            ForEach(journeySongs, id: \.id) { song in
-                                songRow(song: song, subdirectory: subdirectory(for: journey.id))
-                            }
-                        }
-                    }
-                }
+    private var starredSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("STARRED")
+            ForEach(starredSongs, id: \.id) { song in
+                songRow(song, showsUnstar: true)
             }
         }
     }
 
-    // MARK: - Catalyst section
+    // MARK: - Footer
 
-    private var catalystSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("The Catalyst Tracks")
-                .font(.custom("PlayfairDisplay-SemiBold", size: 15))
-                .foregroundColor(Color("ink"))
-
-            let catalystSongs = songs
-                .filter { $0.journeyId == "catalyst" && $0.isAvailable }
-                .sorted { $0.sortOrder < $1.sortOrder }
-
-            ForEach(catalystSongs, id: \.id) { song in
-                songRow(song: song, subdirectory: nil)
-            }
-        }
+    private var footer: some View {
+        Text("✦ UPTIME PRIZES ✦")
+            .font(.custom("PlayfairDisplay-Regular", size: 12))
+            .tracking(3)
+            .foregroundColor(Color("brass").opacity(0.7))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 12)
     }
 
-    // MARK: - Song row
+    // MARK: - Pieces
 
-    private func songRow(song: SongEntity, subdirectory: String?) -> some View {
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.custom("PlayfairDisplay-SemiBold", size: 13))
+            .tracking(2)
+            .foregroundColor(Color("ink").opacity(0.6))
+    }
+
+    private func statePill(_ text: String) -> some View {
+        Text(text)
+            .font(.custom("PlayfairDisplay-Regular", size: 12))
+            .foregroundColor(Color("paper"))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color("brass"))
+            .clipShape(Capsule())
+    }
+
+    private func songRow(_ song: SongEntity, showsUnstar: Bool) -> some View {
         HStack(spacing: 14) {
-            Button {
-                togglePreview(song: song, subdirectory: subdirectory)
-            } label: {
-                Image(systemName: playingPreviewId == song.id ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(Color("brass"))
+            if song.isAvailable {
+                Button { togglePlay(song) } label: {
+                    Image(systemName: playingSongId == song.id ? "stop.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundColor(Color("brass"))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(song.title)
                     .font(.custom("PlayfairDisplay-SemiBold", size: 15))
                     .foregroundColor(Color("ink"))
-                Text("Day \(song.sortOrder)")
-                    .font(.custom("PlayfairDisplay-Regular", size: 12))
-                    .foregroundColor(Color("ink").opacity(0.5))
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 16)
-        .background(Color.white.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    // MARK: - Repeat days row
-
-    private var repeatDaysRow: some View {
-        HStack(spacing: 8) {
-            ForEach(1...7, id: \.self) { day in
-                Button {
-                    toggleRepeatDay(day)
-                } label: {
-                    Text(dayAbbreviation(day))
+                if !song.isAvailable {
+                    Text(CuratorCopy.songNotReady)
                         .font(.custom("PlayfairDisplay-Regular", size: 12))
-                        .foregroundColor(selectedRepeatDays.contains(day) ? Color("paper") : Color("ink").opacity(0.6))
-                        .frame(width: 34, height: 34)
-                        .background(selectedRepeatDays.contains(day) ? Color("brass") : Color("ink").opacity(0.08))
-                        .clipShape(Circle())
+                        .foregroundColor(Color("ink").opacity(0.5))
+                }
+            }
+            Spacer()
+            if showsUnstar {
+                Button { unstar(song) } label: {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(Color("brass"))
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.white.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: - Time picker sheet
+    // MARK: - Lookups
 
-    private var timePickerSheet: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                DatePicker(
-                    "Alarm Time",
-                    selection: Binding(
-                        get: {
-                            var components = DateComponents()
-                            components.hour = selectedHour
-                            components.minute = selectedMinute
-                            return Calendar.current.date(from: components) ?? Date()
-                        },
-                        set: { date in
-                            let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                            selectedHour = components.hour ?? 7
-                            selectedMinute = components.minute ?? 0
-                        }
-                    ),
-                    displayedComponents: .hourAndMinute
-                )
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-            }
-            .padding()
-            .navigationTitle("Set Alarm Time")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        saveAlarmTime()
-                        showTimePicker = false
-                    }
-                    .foregroundColor(Color("brass"))
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showTimePicker = false
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
+    private func title(for journeyId: String) -> String {
+        journeys.first(where: { $0.id == journeyId })?.title ?? ""
+    }
+
+    private func journeySongs(_ journeyId: String) -> [SongEntity] {
+        songs.filter { $0.journeyId == journeyId }.sorted { $0.sortOrder < $1.sortOrder }
     }
 
     // MARK: - Actions
 
-    private func toggleAlarm(enabled: Bool) {
-        guard let alarm = alarm else { return }
-        alarm.isEnabled = enabled
-        try? context.save()
-        if enabled {
-            alarmEngine.scheduleAlarm(hour: alarm.hour, minute: alarm.minute, repeatDays: alarm.repeatDays)
-        } else {
-            alarmEngine.cancelAlarm()
+    /// Plays The Prize (the full song) of an owned song; one at a time.
+    private func togglePlay(_ song: SongEntity) {
+        if playingSongId == song.id {
+            stop()
+            return
         }
-    }
-
-    private func saveAlarmTime() {
-        guard let alarm = alarm else { return }
-        alarm.hour = selectedHour
-        alarm.minute = selectedMinute
-        alarm.repeatDays = Array(selectedRepeatDays)
-        try? context.save()
-        if alarm.isEnabled {
-            alarmEngine.scheduleAlarm(hour: selectedHour, minute: selectedMinute, repeatDays: Array(selectedRepeatDays))
+        guard let manifestSong = audioManager.songs(forJourneyId: song.journeyId)
+            .first(where: { $0.id == song.id }) else { return }
+        audioManager.stopAll()
+        playingSongId = song.id
+        let started = audioManager.playStage3(
+            filename: manifestSong.fileStem,
+            subdirectory: song.journeyId == CatalogRules.genesisId ? "Audio/genesis" : nil,
+            region: manifestSong.fullRegion
+        ) { [weak audioManager] in
+            Task { @MainActor in audioManager?.stopAll() }
         }
+        if !started { playingSongId = nil }
     }
 
-    private func toggleRepeatDay(_ day: Int) {
-        if selectedRepeatDays.contains(day) {
-            selectedRepeatDays.remove(day)
-        } else {
-            selectedRepeatDays.insert(day)
+    private func stop() {
+        audioManager.stopAll()
+        playingSongId = nil
+    }
+
+    private func unstar(_ song: SongEntity) {
+        if let star = starred.first(where: { $0.songId == song.id }) {
+            context.delete(star)
+            try? context.save()
         }
-    }
-
-    private func togglePreview(song: SongEntity, subdirectory: String?) {
-        if playingPreviewId == song.id {
-            audioManager.stopAll()
-            playingPreviewId = nil
-        } else {
-            // Only one song plays at a time
-            audioManager.stopAll()
-            playingPreviewId = song.id
-            // Play The Prize (fullRegion) for preview
-            if let manifestSong = audioManager.songs(forJourneyId: song.journeyId)
-                .first(where: { $0.id == song.id }) {
-                audioManager.playStage3(
-                    filename: manifestSong.fileStem,
-                    subdirectory: subdirectory,
-                    region: manifestSong.fullRegion
-                ) { [weak audioManager] in
-                    Task { @MainActor in
-                        audioManager?.stopAll()
-                    }
-                }
-            } else {
-                // Fallback: play full file
-                audioManager.play(filename: song.fileStem, subdirectory: subdirectory)
-            }
-        }
-    }
-
-    // MARK: - Helpers
-
-    private var formattedTime: String {
-        let h = selectedHour % 12 == 0 ? 12 : selectedHour % 12
-        let m = String(format: "%02d", selectedMinute)
-        return "\(h):\(m)"
-    }
-
-    private var amPmLabel: String {
-        selectedHour < 12 ? "AM" : "PM"
-    }
-
-    private func dayAbbreviation(_ day: Int) -> String {
-        ["S", "M", "T", "W", "T", "F", "S"][day - 1]
-    }
-
-    private func subdirectory(for journeyId: String) -> String? {
-        journeyId == "genesis" ? "Audio/genesis" : nil
     }
 }
-
-// MARK: - AudioPlayerManager convenience
-

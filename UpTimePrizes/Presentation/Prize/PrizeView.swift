@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // MARK: - PrizeView
 //
@@ -58,10 +59,32 @@ extension AlarmEngine.MorningOutcome {
 struct PrizeView: View {
 
     let outcome: AlarmEngine.MorningOutcome
+    /// The song this morning played; nil hides the star.
+    var songId: String? = nil
     var onContinue: () -> Void
+
+    @Environment(\.modelContext) private var context
+    @Query private var starred: [StarredSongEntity]
 
     private var headerText: String { outcome.prizeHeader }
     private var messageText: String { outcome.prizeMessage }
+
+    private var isStarred: Bool {
+        guard let songId else { return false }
+        return starred.contains { $0.songId == songId }
+    }
+
+    /// Star or unstar this morning's song (screen map §3.4 — starred songs
+    /// are playable from the Player's STARRED section).
+    private func toggleStar() {
+        guard let songId else { return }
+        if let existing = starred.first(where: { $0.songId == songId }) {
+            context.delete(existing)
+        } else {
+            context.insert(StarredSongEntity(songId: songId))
+        }
+        try? context.save()
+    }
 
     // MARK: - Body
 
@@ -88,6 +111,16 @@ struct PrizeView: View {
                     .foregroundColor(Color("ink"))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 36)
+
+                if songId != nil {
+                    Spacer().frame(height: 28)
+                    Button(action: toggleStar) {
+                        Image(systemName: isStarred ? "star.fill" : "star")
+                            .font(.system(size: 30))
+                            .foregroundColor(Color("brass"))
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 Spacer()
 

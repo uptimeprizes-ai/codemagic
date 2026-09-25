@@ -62,6 +62,7 @@ struct ContentView: View {
     @State private var alarmEngine: AlarmEngine?
     @State private var isSeeded: Bool = false
     @State private var prizeOutcome: AlarmEngine.MorningOutcome?
+    @State private var prizeSongId: String?
     @State private var showMissedAlarm: Bool = false
     @State private var missedSounded: Bool = true
     @StateObject private var notificationDelegate = NotificationDelegate()
@@ -83,7 +84,7 @@ struct ContentView: View {
                     // the alarm, so the alarm screen can never close before
                     // the Prize screen renders (Android bug guard 1, §2.5).
                     if let outcome = prizeOutcome {
-                        PrizeView(outcome: outcome) {
+                        PrizeView(outcome: outcome, songId: prizeSongId) {
                             prizeOutcome = nil
                             showAlarm = false
                             maybeRequestReview()
@@ -93,6 +94,9 @@ struct ContentView: View {
                             stageCoordinator: stageCoordinator,
                             audioManager: audioManager,
                             onDismiss: {
+                                // Captured before stopAlarm clears it: the
+                                // Prize screen offers a star for this song.
+                                prizeSongId = stageCoordinator.currentSong?.id
                                 let stage = stageCoordinator.currentStage
                                 let outcome = engine.handleAlarmDismissed(
                                     audioSounded: stageCoordinator.audioSounded,

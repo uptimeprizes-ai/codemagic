@@ -37,6 +37,10 @@ class StageCoordinator: ObservableObject {
     /// latch is the proof the engine checks at dismissal.
     @Published private(set) var audioSounded: Bool = false
 
+    /// Replay gives exactly ONE additional listen of The Prize per alarm
+    /// session, then the song waits (screen map §7).
+    @Published private(set) var replayAvailable: Bool = true
+
     /// Option B: fired when the current stage's ring limit is reached with
     /// nobody answering — seven minutes for the Invite and the Nudge, the
     /// 30-minute backstop for the Prize. The owner decides what happens
@@ -89,6 +93,7 @@ class StageCoordinator: ObservableObject {
         self.currentFilename = song.fileStem
         self.currentSubdirectory = subdirectory
         audioSounded = false
+        replayAvailable = true
         currentStage = stage
         playCurrentStage()
     }
@@ -115,7 +120,8 @@ class StageCoordinator: ObservableObject {
 
     /// Handle the Replay button tap — replay The Prize once more.
     func handleReplay() {
-        guard let song = currentSong, let audio = audioManager else { return }
+        guard replayAvailable, let song = currentSong, let audio = audioManager else { return }
+        replayAvailable = false
         currentStage = .stage3
         audio.replay(
             filename: currentFilename,
