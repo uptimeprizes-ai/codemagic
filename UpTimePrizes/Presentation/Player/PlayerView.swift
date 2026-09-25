@@ -245,14 +245,15 @@ struct PlayerView: View {
         }
         guard let manifestSong = audioManager.songs(forJourneyId: song.journeyId)
             .first(where: { $0.id == song.id }) else { return }
-        audioManager.stopAll()
+        let manager = audioManager
+        manager.stopAll()
         playingSongId = song.id
-        let started = audioManager.playStage3(
+        let started = manager.playStage3(
             filename: manifestSong.fileStem,
             subdirectory: song.journeyId == CatalogRules.genesisId ? "Audio/genesis" : nil,
             region: manifestSong.fullRegion
-        ) { [weak audioManager] in
-            Task { @MainActor in audioManager?.stopAll() }
+        ) { [weak manager] in
+            Task { @MainActor in manager?.stopAll() }
         }
         if !started { playingSongId = nil }
     }

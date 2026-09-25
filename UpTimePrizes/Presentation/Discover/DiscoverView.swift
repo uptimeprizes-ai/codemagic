@@ -90,7 +90,7 @@ struct DiscoverView: View {
     }
 
     /// "Eight more mornings…", counting down to "Tomorrow." (screen map §4).
-    static func countdownLine(remaining: Int) -> String {
+    nonisolated static func countdownLine(remaining: Int) -> String {
         if remaining <= 1 { return "Tomorrow." }
         let formatter = NumberFormatter()
         formatter.numberStyle = .spellOut
