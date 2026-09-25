@@ -3,6 +3,7 @@ import SwiftUI
 
 #if canImport(AlarmKit)
 import AlarmKit
+import ActivityKit
 
 // MARK: - AlarmKitScheduler (Option 2 — founder, 2026-09-23)
 //
@@ -12,8 +13,8 @@ import AlarmKit
 // "the morning counts because it sounded" an honest statement even when
 // nobody answers. Devices below iOS 26 keep the notification path.
 //
-// Sound: the system default until the pipeline delivers per-song alert
-// excerpts (≤30 s hard cap; loop1 cuts trimmed to fit). Never cut here.
+// Sound: the UpTime doorbell (founder, Option B): one signature sound, the
+// same every morning and every snooze return, shipped exactly as delivered.
 
 @available(iOS 26.0, *)
 nonisolated struct UpTimeAlarmMetadata: AlarmMetadata {}
@@ -90,14 +91,15 @@ enum AlarmKitScheduler {
                 countdownDuration: nil,
                 schedule: schedule,
                 attributes: makeAttributes(),
-                stopIntent: OpenMorningIntent()
+                stopIntent: OpenMorningIntent(),
+                sound: alarmSound
             )
             _ = try await AlarmManager.shared.schedule(id: alarmUUID, configuration: configuration)
         } catch {
             UpTimeLog.alarm.error("[ALARM] AlarmKit schedule threw: \(String(reflecting: error), privacy: .public)")
             throw error
         }
-        UpTimeLog.alarm.notice("[ALARM] AlarmKit scheduled \(hour, privacy: .public):\(String(format: "%02d", minute), privacy: .public) alert-only")
+        UpTimeLog.alarm.notice("[ALARM] AlarmKit scheduled \(hour, privacy: .public):\(String(format: "%02d", minute), privacy: .public) alert-only, sound=\(doorbellFile, privacy: .public)")
     }
 
     static func cancel() {
@@ -122,7 +124,8 @@ enum AlarmKitScheduler {
                 countdownDuration: nil,
                 schedule: Alarm.Schedule.fixed(fireDate),
                 attributes: makeAttributes(),
-                stopIntent: OpenMorningIntent()
+                stopIntent: OpenMorningIntent(),
+                sound: alarmSound
             )
             _ = try await AlarmManager.shared.schedule(id: snoozeUUID, configuration: configuration)
         } catch {
@@ -138,10 +141,21 @@ enum AlarmKitScheduler {
 
     // MARK: - Shared configuration
 
+    /// The doorbell's file name at the bundle root (≤30 s; AlarmKit's cap).
+    static let doorbellFile = "door_bell_006.m4a"
+
+    /// The doorbell when it is in the bundle; the system sound otherwise.
+    private static var alarmSound: AlertConfiguration.AlertSound {
+        if Bundle.main.url(forResource: "door_bell_006", withExtension: "m4a") != nil {
+            return .named(doorbellFile)
+        }
+        UpTimeLog.alarm.error("[ALARM] doorbell missing from the bundle — using the system sound")
+        return .default
+    }
+
     /// Alert-only presentation (no countdown — see schedule's note). Every
     /// configuration pairs it with OpenMorningIntent, so Dismiss stops the
-    /// ring AND opens the app into the morning. Sound: the system default
-    /// until the founder's signature sound arrives (one file, ≤30 s).
+    /// ring AND opens the app into the morning.
     private static func makeAttributes() -> AlarmAttributes<UpTimeAlarmMetadata> {
         // "Dismiss" is the specification's own word; the alert title is the
         // marked placeholder until the curator rules.

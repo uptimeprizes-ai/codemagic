@@ -33,7 +33,12 @@ targets:
         excludes:
           - "Resources/Audio/**"
           - "Resources/uptime_full_manifest.json"
+          - "Resources/Sounds/**"
       - path: UpTimePrizes/Resources/uptime_full_manifest.json
+        buildPhase: resources
+      # The AlarmKit doorbell — at the bundle ROOT, where AlertSound.named
+      # looks for it. Guarded by BundledAudioTests.
+      - path: UpTimePrizes/Resources/Sounds/door_bell_006.m4a
         buildPhase: resources
       # A folder REFERENCE (type: folder), copied wholesale into the bundle
       # as Audio/… — lookups use subdirectory "Audio/<journeyId>".

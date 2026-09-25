@@ -1,6 +1,7 @@
 import XCTest
 import SwiftData
 import CryptoKit
+import AVFoundation
 @testable import UpTimePrizes
 
 // MARK: - Fixture manifest
@@ -201,6 +202,23 @@ final class BundledAudioTests: XCTestCase {
             let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
             XCTAssertEqual(digest, entry.sha256, "\(entry.stem).m4a is not the pipeline's approved encode")
         }
+    }
+
+    /// The AlarmKit doorbell: at the bundle root (where AlertSound.named
+    /// looks), exactly the file the founder delivered, and under AlarmKit's
+    /// 30-second cap.
+    func testDoorbellIsBundledUnchangedAndUnderThirtySeconds() throws {
+        let url = try XCTUnwrap(
+            Bundle.main.url(forResource: "door_bell_006", withExtension: "m4a"),
+            "door_bell_006.m4a missing from the bundle root — AlarmKit would fall back to the system sound"
+        )
+        let data = try Data(contentsOf: url)
+        let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(digest, "0f5835e9d2cfde7b525daf838e9e4d57f266b0bb70662024723647fa2b6d7add",
+                       "door_bell_006.m4a is not the file the founder delivered")
+        let duration = try AVAudioPlayer(contentsOf: url).duration
+        XCTAssertGreaterThan(duration, 1)
+        XCTAssertLessThan(duration, 30, "AlarmKit plays custom sounds only under 30 seconds")
     }
 
     func testEveryGenesisManifestSongResolvesToBundledAudio() throws {
