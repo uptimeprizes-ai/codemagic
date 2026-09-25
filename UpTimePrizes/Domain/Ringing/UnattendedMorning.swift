@@ -100,26 +100,26 @@ enum AlarmRingLog {
     private static let armedConfigKey = "com.uptimeprizes.ring.armedConfig"
     private static let evaluatedKey = "com.uptimeprizes.ring.lastEvaluatedOccurrence"
 
-    static func recordAnswered(_ date: Date = Date()) { set(date, answeredKey) }
-    static var lastAnsweredAt: Date? { get(answeredKey) }
+    static func recordAnswered(_ date: Date = Date()) { writeDate(date, answeredKey) }
+    static var lastAnsweredAt: Date? { readDate(answeredKey) }
 
-    static func recordSnoozeReturn(at date: Date) { set(date, snoozeReturnKey) }
-    static var lastSnoozeReturnAt: Date? { get(snoozeReturnKey) }
+    static func recordSnoozeReturn(at date: Date) { writeDate(date, snoozeReturnKey) }
+    static var lastSnoozeReturnAt: Date? { readDate(snoozeReturnKey) }
 
     /// Called whenever the alarm is (re-)scheduled. armedSince moves only when
     /// the alarm's time or days actually change — routine re-arming on launch
     /// must not hide a morning that already rang.
     static func recordArmed(hour: Int, minute: Int, repeatDays: [Int], now: Date = Date()) {
         let config = "\(hour):\(minute):\(repeatDays.sorted())"
-        if UserDefaults.standard.string(forKey: armedConfigKey) != config || get(armedSinceKey) == nil {
+        if UserDefaults.standard.string(forKey: armedConfigKey) != config || readDate(armedSinceKey) == nil {
             UserDefaults.standard.set(config, forKey: armedConfigKey)
-            set(now, armedSinceKey)
+            writeDate(now, armedSinceKey)
         }
     }
-    static var armedSince: Date? { get(armedSinceKey) }
+    static var armedSince: Date? { readDate(armedSinceKey) }
 
-    static func markEvaluated(_ occurrence: Date) { set(occurrence, evaluatedKey) }
-    static func wasEvaluated(_ occurrence: Date) -> Bool { get(evaluatedKey) == occurrence }
+    static func markEvaluated(_ occurrence: Date) { writeDate(occurrence, evaluatedKey) }
+    static func wasEvaluated(_ occurrence: Date) -> Bool { readDate(evaluatedKey) == occurrence }
 
     /// When the device last booted. A ring due before the boot could not sound.
     static func bootTime() -> Date? {
@@ -130,10 +130,10 @@ enum AlarmRingLog {
         return Date(timeIntervalSince1970: TimeInterval(tv.tv_sec) + TimeInterval(tv.tv_usec) / 1_000_000)
     }
 
-    private static func set(_ date: Date, _ key: String) {
+    private static func writeDate(_ date: Date, _ key: String) {
         UserDefaults.standard.set(date.timeIntervalSince1970, forKey: key)
     }
-    private static func get(_ key: String) -> Date? {
+    private static func readDate(_ key: String) -> Date? {
         let t = UserDefaults.standard.double(forKey: key)
         return t > 0 ? Date(timeIntervalSince1970: t) : nil
     }
