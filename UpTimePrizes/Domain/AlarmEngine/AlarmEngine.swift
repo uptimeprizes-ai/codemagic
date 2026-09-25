@@ -31,6 +31,11 @@ class AlarmEngine: ObservableObject {
 
     private let context: ModelContext
 
+    /// Scheduling runs one request at a time. Launch and foreground both
+    /// re-arm; two AlarmKit schedules for the same id at once make one fail
+    /// and fall back to a notification, leaving two alarms (build 130).
+    private var scheduleChain: Task<Void, Never>?
+
     // MARK: - Init
 
     init(context: ModelContext) {
@@ -66,7 +71,9 @@ class AlarmEngine: ObservableObject {
         #if canImport(AlarmKit)
         if #available(iOS 26.0, *) {
             let snooze = snoozeMinutes
-            Task { @MainActor in
+            let previous = scheduleChain
+            scheduleChain = Task { @MainActor in
+                await previous?.value
                 if await AlarmKitScheduler.requestAuthorization() {
                     do {
                         try await AlarmKitScheduler.schedule(
