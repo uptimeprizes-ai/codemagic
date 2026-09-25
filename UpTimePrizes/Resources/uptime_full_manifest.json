@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "total_songs": 42,
+  "total_songs": 90,
   "generated_at": "2026-08-05T00:00:00Z",
   "journeys": [
     {
@@ -21,7 +21,10 @@
       "title": "The Cast Prelude",
       "category": "signature",
       "totalDays": 9,
-      "productId": "com.uptime.prizes.signature",
+      "productId": "journey_cast_prelude",
+      "legacyProductIds": [
+        "com.uptime.prizes.signature"
+      ],
       "price": "$2.99",
       "description": "What makes a Signature Journey different from a full Journey is the curation — each song edited and orchestrated specifically for the three-stage experience. The depth of attention here is that of a featured release.\nMore Signature Journeys are coming.",
       "sortOrder": 1,
@@ -60,7 +63,10 @@
       "title": "The Catalyst Tracks",
       "category": "special-day",
       "totalDays": 5,
-      "productId": "com.uptime.prizes.special_day",
+      "productId": "journey_catalyst",
+      "legacyProductIds": [
+        "com.uptime.prizes.special_day"
+      ],
       "price": "$1.99",
       "description": "The morning you mark a milestone.\nThe morning you start a trip.\nThe morning you claim solitude.\nThe morning you walk into something demanding.\nThe morning you forgive yesterday and begin again.\nEach track features a different member of the Ensemble.",
       "sortOrder": 4,
@@ -80,6 +86,19 @@
       "framingLine": "Eight songs for the people who teach.",
       "description": "Eight songs for the people who teach. Granted, not sold.",
       "sortOrder": 5
+    },
+    {
+      "journeyId": "overture",
+      "title": "The Overture",
+      "category": "overture",
+      "totalDays": 49,
+      "productId": "journey_overture",
+      "price": "$9.99",
+      "packName": "overture",
+      "entitlementId": "",
+      "sortOrder": 6,
+      "framingLine": "",
+      "description": ""
     }
   ],
   "songs": [
@@ -344,9 +363,6 @@
       "sortOrder": 1,
       "title": "The Anniversary of You",
       "genre": "Bright Up-Tempo Big Band Swing",
-      "cast": "Reno (The Heartthrob)",
-      "bpm": 155,
-      "purpose": "Milestone Celebration",
       "lufs": -14.0,
       "loop1Region": {
         "startMs": 0,
@@ -360,7 +376,10 @@
         "startMs": 86270,
         "endMs": 271820
       },
-      "journeyId": "catalyst"
+      "journeyId": "catalyst",
+      "cast": "Reno (The Heartthrob)",
+      "bpm": 155,
+      "purpose": "Milestone Celebration"
     },
     {
       "id": "special-day-02",
@@ -370,9 +389,6 @@
       "sortOrder": 2,
       "title": "The Vacation Kickoff",
       "genre": "Neo-Celtic Big Band Swing",
-      "cast": "Jax (Chaotic Female) & Sam (Sharp Male)",
-      "bpm": 145,
-      "purpose": "High-Adrenaline Escape",
       "lufs": -14.0,
       "loop1Region": {
         "startMs": 0,
@@ -386,7 +402,10 @@
         "startMs": 42060,
         "endMs": 247860
       },
-      "journeyId": "catalyst"
+      "journeyId": "catalyst",
+      "cast": "Jax (Chaotic Female) & Sam (Sharp Male)",
+      "bpm": 145,
+      "purpose": "High-Adrenaline Escape"
     },
     {
       "id": "special-day-03",
@@ -396,9 +415,6 @@
       "sortOrder": 3,
       "title": "My Own Company",
       "genre": "1930s Harlem Renaissance Jazz / Slow Blues",
-      "cast": "Sunday (The Star)",
-      "bpm": 110,
-      "purpose": "Intentional Isolation",
       "lufs": -13.8,
       "loop1Region": {
         "startMs": 0,
@@ -412,7 +428,10 @@
         "startMs": 94610,
         "endMs": 316400
       },
-      "journeyId": "catalyst"
+      "journeyId": "catalyst",
+      "cast": "Sunday (The Star)",
+      "bpm": 110,
+      "purpose": "Intentional Isolation"
     },
     {
       "id": "special-day-04",
@@ -422,9 +441,6 @@
       "sortOrder": 4,
       "title": "Step Into The Room (Showtime)",
       "genre": "Fast Classic Jazz & Bebop Hybrid",
-      "cast": "Clara (Velvety Female) & Ruby (Brassy Female)",
-      "bpm": 145,
-      "purpose": "High-Stakes Hustle",
       "lufs": -14.0,
       "loop1Region": {
         "startMs": 0,
@@ -438,7 +454,10 @@
         "startMs": 44940,
         "endMs": 217969
       },
-      "journeyId": "catalyst"
+      "journeyId": "catalyst",
+      "cast": "Clara (Velvety Female) & Ruby (Brassy Female)",
+      "bpm": 145,
+      "purpose": "High-Stakes Hustle"
     },
     {
       "id": "special-day-05",
@@ -448,9 +467,6 @@
       "sortOrder": 5,
       "title": "The Slate is Washed (The Clean Slate)",
       "genre": "Dynamic Ballad to Texas Western Swing",
-      "cast": "Wyatt (The Soulful Sage)",
-      "bpm": "70 shifting to 155",
-      "purpose": "The Restoration Morning",
       "lufs": -14.0,
       "loop1Region": {
         "startMs": 0,
@@ -464,7 +480,10 @@
         "startMs": 114620,
         "endMs": 290200
       },
-      "journeyId": "catalyst"
+      "journeyId": "catalyst",
+      "cast": "Wyatt (The Soulful Sage)",
+      "bpm": "70 shifting to 155",
+      "purpose": "The Restoration Morning"
     },
     {
       "id": "demo-04",
@@ -1063,6 +1082,1110 @@
         "endMs": 416940
       },
       "journeyId": "educator"
+    },
+    {
+      "id": "overture-48-01",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "rise_and_radiate.ogg",
+      "sortOrder": 1,
+      "title": "Rise and Radiate",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 33178
+      },
+      "loop2Region": {
+        "startMs": 41510,
+        "endMs": 89397
+      },
+      "fullRegion": {
+        "startMs": 97806,
+        "endMs": 316600
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-02",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_boulevard_strut.ogg",
+      "sortOrder": 2,
+      "title": "The Boulevard Strut",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 28432
+      },
+      "loop2Region": {
+        "startMs": 37182,
+        "endMs": 79151
+      },
+      "fullRegion": {
+        "startMs": 87380,
+        "endMs": 285910
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-03",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_silver_lining_waltz.ogg",
+      "sortOrder": 3,
+      "title": "The Silver Lining Waltz",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 63065
+      },
+      "loop2Region": {
+        "startMs": 74418,
+        "endMs": 151358
+      },
+      "fullRegion": {
+        "startMs": 161133,
+        "endMs": 391330
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-04",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "dashboard_sunrise.ogg",
+      "sortOrder": 4,
+      "title": "Dashboard Sunrise",
+      "genre": "Country-Western Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 23768
+      },
+      "loop2Region": {
+        "startMs": 33210,
+        "endMs": 71842
+      },
+      "fullRegion": {
+        "startMs": 81052,
+        "endMs": 318790
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-05",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_coffee_confession.ogg",
+      "sortOrder": 5,
+      "title": "The Coffee Confession",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 59161
+      },
+      "loop2Region": {
+        "startMs": 67795,
+        "endMs": 136850
+      },
+      "fullRegion": {
+        "startMs": 145227,
+        "endMs": 366980
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-06",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_velvet_morning.ogg",
+      "sortOrder": 6,
+      "title": "The Velvet Morning",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 23784
+      },
+      "loop2Region": {
+        "startMs": 32953,
+        "endMs": 66116
+      },
+      "fullRegion": {
+        "startMs": 74438,
+        "endMs": 291840
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-07",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "hope_on_the_horizon.ogg",
+      "sortOrder": 7,
+      "title": "Hope on the Horizon",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 27145
+      },
+      "loop2Region": {
+        "startMs": 36582,
+        "endMs": 93346
+      },
+      "fullRegion": {
+        "startMs": 101528,
+        "endMs": 280740
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-08",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "wide_open_territory.ogg",
+      "sortOrder": 8,
+      "title": "Wide Open Territory",
+      "genre": "Country-Western Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 25853
+      },
+      "loop2Region": {
+        "startMs": 34573,
+        "endMs": 66295
+      },
+      "fullRegion": {
+        "startMs": 74786,
+        "endMs": 299380
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-09",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "banana_peel_boogie.ogg",
+      "sortOrder": 9,
+      "title": "Banana Peel Boogie",
+      "genre": "Gypsy Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 25099
+      },
+      "loop2Region": {
+        "startMs": 34355,
+        "endMs": 62897
+      },
+      "fullRegion": {
+        "startMs": 71726,
+        "endMs": 288180
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-10",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "good_day_on_replay.ogg",
+      "sortOrder": 10,
+      "title": "Good Day on Replay",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 24667
+      },
+      "loop2Region": {
+        "startMs": 34446,
+        "endMs": 75291
+      },
+      "fullRegion": {
+        "startMs": 83664,
+        "endMs": 298540
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-11",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_gravel_road_anthem.ogg",
+      "sortOrder": 11,
+      "title": "The Gravel Road Anthem",
+      "genre": "Country-Western Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19944
+      },
+      "loop2Region": {
+        "startMs": 29324,
+        "endMs": 58553
+      },
+      "fullRegion": {
+        "startMs": 68352,
+        "endMs": 284880
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-12",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_top_hat_tango.ogg",
+      "sortOrder": 12,
+      "title": "The Top Hat Tango",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 31364
+      },
+      "loop2Region": {
+        "startMs": 39541,
+        "endMs": 117957
+      },
+      "fullRegion": {
+        "startMs": 126155,
+        "endMs": 336010
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-13",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "empire_builder.ogg",
+      "sortOrder": 13,
+      "title": "Empire Builder",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30570
+      },
+      "loop2Region": {
+        "startMs": 39420,
+        "endMs": 79395
+      },
+      "fullRegion": {
+        "startMs": 87777,
+        "endMs": 302100
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-14",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_morning_magistrate.ogg",
+      "sortOrder": 14,
+      "title": "The Morning Magistrate",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 40581
+      },
+      "loop2Region": {
+        "startMs": 48744,
+        "endMs": 94428
+      },
+      "fullRegion": {
+        "startMs": 102537,
+        "endMs": 319190
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-15",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_highway_hum.ogg",
+      "sortOrder": 15,
+      "title": "The Highway Hum",
+      "genre": "Country-Western Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 46995
+      },
+      "loop2Region": {
+        "startMs": 56543,
+        "endMs": 111716
+      },
+      "fullRegion": {
+        "startMs": 120953,
+        "endMs": 331770
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-16",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "brass_tacks_and_bootstraps.ogg",
+      "sortOrder": 16,
+      "title": "Brass Tacks and Bootstraps",
+      "genre": "Country-Western Swing",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30626
+      },
+      "loop2Region": {
+        "startMs": 39086,
+        "endMs": 82537
+      },
+      "fullRegion": {
+        "startMs": 90782,
+        "endMs": 273610
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-17",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "sidewalk_shuffle.ogg",
+      "sortOrder": 17,
+      "title": "Sidewalk Shuffle",
+      "genre": "Gypsy Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30900
+      },
+      "loop2Region": {
+        "startMs": 40005,
+        "endMs": 90336
+      },
+      "fullRegion": {
+        "startMs": 98905,
+        "endMs": 292570
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-18",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "paving_the_gold.ogg",
+      "sortOrder": 18,
+      "title": "Paving the Gold",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 29215
+      },
+      "loop2Region": {
+        "startMs": 38608,
+        "endMs": 112159
+      },
+      "fullRegion": {
+        "startMs": 120381,
+        "endMs": 308630
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-19",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_whistling_waiter.ogg",
+      "sortOrder": 19,
+      "title": "The Whistling Waiter",
+      "genre": "Gypsy Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 46499
+      },
+      "loop2Region": {
+        "startMs": 55404,
+        "endMs": 102203
+      },
+      "fullRegion": {
+        "startMs": 110778,
+        "endMs": 272190
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-20",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "my_own_private_spotlight.ogg",
+      "sortOrder": 20,
+      "title": "My Own Private Spotlight",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 32037
+      },
+      "loop2Region": {
+        "startMs": 41740,
+        "endMs": 93585
+      },
+      "fullRegion": {
+        "startMs": 101714,
+        "endMs": 313290
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-21",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_compass_calibration.ogg",
+      "sortOrder": 21,
+      "title": "The Compass Calibration",
+      "genre": "Country-Western Swing",
+      "lufs": -14.4,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 32302
+      },
+      "loop2Region": {
+        "startMs": 41476,
+        "endMs": 97286
+      },
+      "fullRegion": {
+        "startMs": 105566,
+        "endMs": 336380
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-22",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_mirror_duet.ogg",
+      "sortOrder": 22,
+      "title": "The Mirror Duet",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 29576
+      },
+      "loop2Region": {
+        "startMs": 38027,
+        "endMs": 114278
+      },
+      "fullRegion": {
+        "startMs": 122438,
+        "endMs": 360460
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-23",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "clockwork_champion.ogg",
+      "sortOrder": 23,
+      "title": "Clockwork Champion",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 33112
+      },
+      "loop2Region": {
+        "startMs": 42391,
+        "endMs": 119671
+      },
+      "fullRegion": {
+        "startMs": 128080,
+        "endMs": 357080
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-24",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_golden_thread.ogg",
+      "sortOrder": 24,
+      "title": "The Golden Thread",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 37874
+      },
+      "loop2Region": {
+        "startMs": 47335,
+        "endMs": 131025
+      },
+      "fullRegion": {
+        "startMs": 139192,
+        "endMs": 364820
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-25",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_morning_scramble.ogg",
+      "sortOrder": 25,
+      "title": "The Morning Scramble",
+      "genre": "Gypsy Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 21373
+      },
+      "loop2Region": {
+        "startMs": 29701,
+        "endMs": 63546
+      },
+      "fullRegion": {
+        "startMs": 72076,
+        "endMs": 283530
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-26",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_architect_s_creed.ogg",
+      "sortOrder": 26,
+      "title": "The Architect's Creed",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 32368
+      },
+      "loop2Region": {
+        "startMs": 41190,
+        "endMs": 91246
+      },
+      "fullRegion": {
+        "startMs": 99820,
+        "endMs": 308030
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-27",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "hat_in_the_wind.ogg",
+      "sortOrder": 27,
+      "title": "Hat in the Wind",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.5,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19657
+      },
+      "loop2Region": {
+        "startMs": 28580,
+        "endMs": 96882
+      },
+      "fullRegion": {
+        "startMs": 106122,
+        "endMs": 299350
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-28",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "building_the_blueprint.ogg",
+      "sortOrder": 28,
+      "title": "Building the Blueprint",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 32721
+      },
+      "loop2Region": {
+        "startMs": 42116,
+        "endMs": 128366
+      },
+      "fullRegion": {
+        "startMs": 136491,
+        "endMs": 354520
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-29",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_mailman_shuffle.ogg",
+      "sortOrder": 29,
+      "title": "The Mailman Shuffle",
+      "genre": "Gypsy Swing",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36314
+      },
+      "loop2Region": {
+        "startMs": 45157,
+        "endMs": 86357
+      },
+      "fullRegion": {
+        "startMs": 94655,
+        "endMs": 298060
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-30",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "keep_moving_forward.ogg",
+      "sortOrder": 30,
+      "title": "Keep Moving Forward",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 58690
+      },
+      "loop2Region": {
+        "startMs": 68744,
+        "endMs": 144995
+      },
+      "fullRegion": {
+        "startMs": 153051,
+        "endMs": 367040
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-31",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "glorious_awakening.ogg",
+      "sortOrder": 31,
+      "title": "Glorious Awakening",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 26614
+      },
+      "loop2Region": {
+        "startMs": 35404,
+        "endMs": 82094
+      },
+      "fullRegion": {
+        "startMs": 90398,
+        "endMs": 286960
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-32",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "riding_the_daylight.ogg",
+      "sortOrder": 32,
+      "title": "Riding the Daylight",
+      "genre": "Country-Western Swing",
+      "lufs": -14.4,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 44874
+      },
+      "loop2Region": {
+        "startMs": 53724,
+        "endMs": 130375
+      },
+      "fullRegion": {
+        "startMs": 138497,
+        "endMs": 374520
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-33",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "sunny_side_up.ogg",
+      "sortOrder": 33,
+      "title": "Sunny-Side Up",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 26599
+      },
+      "loop2Region": {
+        "startMs": 34936,
+        "endMs": 74254
+      },
+      "fullRegion": {
+        "startMs": 82679,
+        "endMs": 282310
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-34",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "neon_nostalgia.ogg",
+      "sortOrder": 34,
+      "title": "Neon Nostalgia",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30736
+      },
+      "loop2Region": {
+        "startMs": 40436,
+        "endMs": 97524
+      },
+      "fullRegion": {
+        "startMs": 105801,
+        "endMs": 346050
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-35",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "crown_the_morning.ogg",
+      "sortOrder": 35,
+      "title": "Crown the Morning",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 38348
+      },
+      "loop2Region": {
+        "startMs": 47450,
+        "endMs": 97630
+      },
+      "fullRegion": {
+        "startMs": 105905,
+        "endMs": 320080
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-36",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_slippery_floor_foxtrot.ogg",
+      "sortOrder": 36,
+      "title": "The Slippery Floor Foxtrot",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 30663
+      },
+      "loop2Region": {
+        "startMs": 39702,
+        "endMs": 90923
+      },
+      "fullRegion": {
+        "startMs": 100631,
+        "endMs": 299840
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-37",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "jumping_the_puddles.ogg",
+      "sortOrder": 37,
+      "title": "Jumping the Puddles",
+      "genre": "Gypsy Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19654
+      },
+      "loop2Region": {
+        "startMs": 29285,
+        "endMs": 85534
+      },
+      "fullRegion": {
+        "startMs": 93864,
+        "endMs": 320290
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-38",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "my_troubles_are_just_passing_through.ogg",
+      "sortOrder": 38,
+      "title": "My Troubles Are Just Passing Through",
+      "genre": "Broadway Swing",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 59177
+      },
+      "loop2Region": {
+        "startMs": 68179,
+        "endMs": 133989
+      },
+      "fullRegion": {
+        "startMs": 142088,
+        "endMs": 336040
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-39",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_coffee_cup_compass.ogg",
+      "sortOrder": 39,
+      "title": "The Coffee Cup Compass",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 19398
+      },
+      "loop2Region": {
+        "startMs": 29221,
+        "endMs": 127390
+      },
+      "fullRegion": {
+        "startMs": 135756,
+        "endMs": 345456
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-40",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_bold_refrain.ogg",
+      "sortOrder": 40,
+      "title": "The Bold Refrain",
+      "genre": "Jump Blues",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 48876
+      },
+      "loop2Region": {
+        "startMs": 58021,
+        "endMs": 120516
+      },
+      "fullRegion": {
+        "startMs": 129318,
+        "endMs": 312880
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-41",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "lightning_in_a_bottle.ogg",
+      "sortOrder": 41,
+      "title": "Lightning in a Bottle",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 21907
+      },
+      "loop2Region": {
+        "startMs": 32247,
+        "endMs": 80897
+      },
+      "fullRegion": {
+        "startMs": 89077,
+        "endMs": 331060
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-42",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "believe_in_the_journey.ogg",
+      "sortOrder": 42,
+      "title": "Believe in the Journey",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 38746
+      },
+      "loop2Region": {
+        "startMs": 51005,
+        "endMs": 120330
+      },
+      "fullRegion": {
+        "startMs": 128348,
+        "endMs": 327804
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-43",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "easy_street_serenade.ogg",
+      "sortOrder": 43,
+      "title": "Easy Street Serenade",
+      "genre": "Vintage Crooner Jazz",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 39951
+      },
+      "loop2Region": {
+        "startMs": 50163,
+        "endMs": 97272
+      },
+      "fullRegion": {
+        "startMs": 105563,
+        "endMs": 283490
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-44",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "silk_and_syncopation.ogg",
+      "sortOrder": 44,
+      "title": "Silk and Syncopation",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 20463
+      },
+      "loop2Region": {
+        "startMs": 28666,
+        "endMs": 92196
+      },
+      "fullRegion": {
+        "startMs": 100637,
+        "endMs": 293820
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-45",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_brightside_bounce.ogg",
+      "sortOrder": 45,
+      "title": "The Brightside Bounce",
+      "genre": "Neo-Urban Groove",
+      "lufs": -14.3,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 33974
+      },
+      "loop2Region": {
+        "startMs": 42782,
+        "endMs": 105231
+      },
+      "fullRegion": {
+        "startMs": 113547,
+        "endMs": 348370
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-46",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "sunlit_jubilee.ogg",
+      "sortOrder": 46,
+      "title": "Sunlit Jubilee",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 36865
+      },
+      "loop2Region": {
+        "startMs": 46264,
+        "endMs": 91149
+      },
+      "fullRegion": {
+        "startMs": 99533,
+        "endMs": 311260
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-47",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "the_velvet_hustle.ogg",
+      "sortOrder": 47,
+      "title": "The Velvet Hustle",
+      "genre": "Cerebral Lounge Jazz",
+      "lufs": -14.1,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 29342
+      },
+      "loop2Region": {
+        "startMs": 38499,
+        "endMs": 79264
+      },
+      "fullRegion": {
+        "startMs": 87521,
+        "endMs": 285291
+      },
+      "journeyId": "overture"
+    },
+    {
+      "id": "overture-48-48",
+      "category": "overture",
+      "subfolder": "UpTime A New OverTure 48",
+      "fileName": "start_the_day_with_a_dance.ogg",
+      "sortOrder": 48,
+      "title": "Start the Day with a Dance",
+      "genre": "Gospel-Soul Fusion",
+      "lufs": -14.2,
+      "loop1Region": {
+        "startMs": 0,
+        "endMs": 41567
+      },
+      "loop2Region": {
+        "startMs": 50075,
+        "endMs": 97126
+      },
+      "fullRegion": {
+        "startMs": 105365,
+        "endMs": 308540
+      },
+      "journeyId": "overture"
     }
   ]
 }

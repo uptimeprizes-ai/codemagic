@@ -143,8 +143,17 @@ final class BundledManifestTests: XCTestCase {
             UpTimeManifest.loadFromBundle(),
             "uptime_full_manifest.json is missing from the app bundle — the packaging is broken"
         )
-        XCTAssertGreaterThanOrEqual(manifest.journeys.count, 6, "Expected the full catalog")
+        // Manifest v3.0 (Android, 2026-09-24): seven journeys, ninety songs.
+        XCTAssertEqual(manifest.journeys.count, 7, "Expected the full catalog including The Overture")
+        XCTAssertEqual(manifest.songs.count, 90)
         XCTAssertEqual(manifest.songs(forJourneyId: "genesis").count, 5)
+        // The Overture: 48 songs, 49 mornings — morning 49 replays song 1.
+        XCTAssertEqual(manifest.songs(forJourneyId: "overture").count, 48)
+        XCTAssertEqual(manifest.journey(withId: "overture")?.totalDays, 49)
+        XCTAssertEqual(manifest.song(forJourneyId: "overture", morning: 49)?.sortOrder, 1)
+        // Retired store ids ride along so old purchases can still restore.
+        XCTAssertEqual(manifest.journey(withId: "cast-prelude")?.legacyProductIds, ["com.uptime.prizes.signature"])
+        XCTAssertEqual(manifest.journey(withId: "catalyst")?.legacyProductIds, ["com.uptime.prizes.special_day"])
         // The placeholder pattern from the June build (0/30000/60000 for every
         // song) must never come back: regions are per-song measurements.
         let placeholderCount = manifest.songs.filter {

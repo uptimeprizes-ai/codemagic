@@ -18,6 +18,10 @@ struct ManifestJourney: Codable {
     let category: String
     let totalDays: Int
     let productId: String
+    /// Store ids this journey was sold under before the journey_<slug>
+    /// convention (manifest v3.0). A purchase made under a retired id must
+    /// still restore — the delivery pass consumes this.
+    let legacyProductIds: [String]?
     let price: String
     let description: String
     let sortOrder: Int
