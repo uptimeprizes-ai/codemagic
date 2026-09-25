@@ -693,6 +693,33 @@ final class PrizeCopyTests: XCTestCase {
     }
 }
 
+// MARK: - AlarmKit Dismiss → the morning
+
+final class PendingMorningStartTests: XCTestCase {
+
+    override func tearDown() {
+        _ = PendingMorningStart.consume() // leave no request behind
+    }
+
+    func testAFreshRequestStartsTheMorningExactlyOnce() {
+        let now = Date()
+        PendingMorningStart.record(now: now)
+        XCTAssertTrue(PendingMorningStart.consume(now: now.addingTimeInterval(5)))
+        XCTAssertFalse(PendingMorningStart.consume(now: now.addingTimeInterval(6)),
+                       "A Dismiss must open the morning once, never twice")
+    }
+
+    func testAStaleRequestNeverStartsALaterMorning() {
+        let now = Date()
+        PendingMorningStart.record(now: now)
+        XCTAssertFalse(PendingMorningStart.consume(now: now.addingTimeInterval(11 * 60)))
+    }
+
+    func testNoRequestMeansNoStart() {
+        XCTAssertFalse(PendingMorningStart.consume())
+    }
+}
+
 // MARK: - Storefront honesty
 
 @MainActor

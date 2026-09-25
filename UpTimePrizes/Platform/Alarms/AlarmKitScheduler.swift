@@ -29,6 +29,12 @@ enum AlarmKitScheduler {
         AlarmManager.shared.authorizationState == .authorized
     }
 
+    /// Whether AlarmKit currently holds our morning alarm.
+    static var isScheduled: Bool {
+        let alarms = (try? AlarmManager.shared.alarms) ?? []
+        return alarms.contains { $0.id == alarmUUID }
+    }
+
     /// Ask once; the system remembers. Returns whether alarms may ring.
     static func requestAuthorization() async -> Bool {
         let before = AlarmManager.shared.authorizationState
@@ -91,10 +97,12 @@ enum AlarmKitScheduler {
             presentation: AlarmPresentation(alert: alert),
             tintColor: Color("brass")
         )
+        // Dismiss stops the ring AND opens the app into the morning.
         let configuration = AlarmManager.AlarmConfiguration(
             countdownDuration: nil,
             schedule: schedule,
-            attributes: attributes
+            attributes: attributes,
+            stopIntent: OpenMorningIntent()
         )
 
         // Replace, never stack: cancel any alarm already holding our id.

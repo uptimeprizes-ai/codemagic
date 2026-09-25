@@ -161,6 +161,7 @@ struct ContentView: View {
                 // an app update from TestFlight/App Store).
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
+                        startPendingMorningIfAny()
                         Task {
                             await engine.verifyAndRescheduleIfNeeded()
                         }
@@ -208,6 +209,16 @@ struct ContentView: View {
 
         // Request notification permission on first launch
         _ = await engine.requestNotificationPermission()
+
+        // A Dismiss on the AlarmKit lock screen that cold-launched the app
+        // left a start request; the UI is ready now, so honour it.
+        startPendingMorningIfAny()
+    }
+
+    /// Starts the in-app morning if an AlarmKit Dismiss asked for it.
+    private func startPendingMorningIfAny() {
+        guard PendingMorningStart.consume() else { return }
+        NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
     }
 
     // MARK: - Helpers

@@ -158,6 +158,14 @@ class AlarmEngine: ObservableObject {
         let fetchAlarm = FetchDescriptor<AlarmEntity>()
         guard let alarm = try? context.fetch(fetchAlarm).first, alarm.isEnabled else { return }
 
+        // When AlarmKit owns the morning there are deliberately no pending
+        // notifications; the alarm is healthy if AlarmKit holds it.
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *), AlarmKitScheduler.isAuthorized, AlarmKitScheduler.isScheduled {
+            return
+        }
+        #endif
+
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
         let alarmIds = Set(allAlarmIdentifiers())
