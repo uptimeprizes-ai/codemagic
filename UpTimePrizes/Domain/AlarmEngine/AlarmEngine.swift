@@ -142,6 +142,7 @@ class AlarmEngine: ObservableObject {
         #if canImport(AlarmKit)
         if #available(iOS 26.0, *) {
             AlarmKitScheduler.cancel()
+            AlarmKitScheduler.cancelSnoozeReturn()
         }
         #endif
         let center = UNUserNotificationCenter.current()
@@ -350,8 +351,10 @@ extension AlarmEngine {
     }
 
     /// Snooze the alarm: stop audio, remember which stage comes back and for
-    /// how long that memory is valid, and schedule the return notification at
-    /// the person's own gap.
+    /// how long that memory is valid, and schedule the return at the
+    /// person's own gap. On iOS 26+ with AlarmKit authorized, the return
+    /// rings as its own lock-screen alarm (through the silent switch — a
+    /// notification would be muted); otherwise a notification carries it.
     func snoozeAlarm(stageAtSnooze: String) {
         let minutes = snoozeMinutes
 
@@ -363,7 +366,28 @@ extension AlarmEngine {
             alarm.resumeStageValidUntil = Date().addingTimeInterval(TimeInterval((minutes + 5) * 60))
             try? context.save()
         }
+        UpTimeLog.alarm.notice("[ALARM] snoozed \(minutes, privacy: .public) min — \(Self.stageAfterSnooze(stageAtSnooze), privacy: .public) comes back")
+        isAlarmActive = false
+        // Note: snooze does NOT count a morning — only a dismissal can.
 
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *), AlarmKitScheduler.isAuthorized {
+            Task { @MainActor in
+                do {
+                    try await AlarmKitScheduler.scheduleSnoozeReturn(after: minutes)
+                } catch {
+                    UpTimeLog.alarm.error("[ALARM] snooze return via AlarmKit failed — using a notification")
+                    self.scheduleSnoozeNotification(minutes: minutes)
+                }
+            }
+            return
+        }
+        #endif
+        scheduleSnoozeNotification(minutes: minutes)
+    }
+
+    /// The pre-iOS-26 (and fallback) snooze return: a one-off notification.
+    private func scheduleSnoozeNotification(minutes: Int) {
         let center = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
         content.title = Self.placeholderAlarmTitle
@@ -383,10 +407,6 @@ extension AlarmEngine {
                 UpTimeLog.alarm.error("[ALARM] failed to schedule snooze: \(error, privacy: .public)")
             }
         }
-        UpTimeLog.alarm.notice("[ALARM] snoozed \(minutes, privacy: .public) min — \(Self.stageAfterSnooze(stageAtSnooze), privacy: .public) comes back")
-
-        isAlarmActive = false
-        // Note: snooze does NOT count a morning — only a dismissal can.
     }
 
     /// The stage the next alarm session should start at: the snoozed-in stage

@@ -25,7 +25,10 @@ struct OpenMorningIntent: LiveActivityIntent {
     init() {}
 
     func perform() async throws -> some IntentResult {
+        // Either the morning alarm or a snooze return may be the one
+        // ringing; stopping the other is a harmless no-op.
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.alarmUUID)
+        try? AlarmManager.shared.stop(id: AlarmKitScheduler.snoozeUUID)
         PendingMorningStart.record()
         await MainActor.run {
             UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed — opening the morning")

@@ -82,6 +82,67 @@ enum AlarmKitScheduler {
         let recurrence = Alarm.Schedule.Relative.Recurrence.weekly(weekdays(from: repeatDays))
         let schedule = Alarm.Schedule.relative(Alarm.Schedule.Relative(time: time, repeats: recurrence))
 
+        // Replace, never stack: cancel any alarm already holding our id.
+        try? AlarmManager.shared.cancel(id: alarmUUID)
+
+        do {
+            let configuration = AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: schedule,
+                attributes: makeAttributes(),
+                stopIntent: OpenMorningIntent()
+            )
+            _ = try await AlarmManager.shared.schedule(id: alarmUUID, configuration: configuration)
+        } catch {
+            UpTimeLog.alarm.error("[ALARM] AlarmKit schedule threw: \(String(reflecting: error), privacy: .public)")
+            throw error
+        }
+        UpTimeLog.alarm.notice("[ALARM] AlarmKit scheduled \(hour, privacy: .public):\(String(format: "%02d", minute), privacy: .public) alert-only")
+    }
+
+    static func cancel() {
+        try? AlarmManager.shared.cancel(id: alarmUUID)
+    }
+
+    // MARK: - Snooze return (the doorbell after a snooze)
+    //
+    // While the phone is locked — or the person is in another app — only
+    // the system alarm can make sound. A snooze return therefore rings as
+    // its own one-off AlarmKit alarm, through the silent switch, and its
+    // Dismiss opens the app at the stage the snooze sent forward. It has
+    // its OWN id, so it can never replace or cancel the recurring morning.
+
+    static let snoozeUUID = UUID(uuidString: "0B5E5EAD-0000-4000-8000-C0FFEE000002")!
+
+    static func scheduleSnoozeReturn(after minutes: Int) async throws {
+        let fireDate = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        try? AlarmManager.shared.cancel(id: snoozeUUID)
+        do {
+            let configuration = AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: Alarm.Schedule.fixed(fireDate),
+                attributes: makeAttributes(),
+                stopIntent: OpenMorningIntent()
+            )
+            _ = try await AlarmManager.shared.schedule(id: snoozeUUID, configuration: configuration)
+        } catch {
+            UpTimeLog.alarm.error("[ALARM] AlarmKit snooze return threw: \(String(reflecting: error), privacy: .public)")
+            throw error
+        }
+        UpTimeLog.alarm.notice("[ALARM] AlarmKit snooze return scheduled in \(minutes, privacy: .public) min")
+    }
+
+    static func cancelSnoozeReturn() {
+        try? AlarmManager.shared.cancel(id: snoozeUUID)
+    }
+
+    // MARK: - Shared configuration
+
+    /// Alert-only presentation (no countdown — see schedule's note). Every
+    /// configuration pairs it with OpenMorningIntent, so Dismiss stops the
+    /// ring AND opens the app into the morning. Sound: the system default
+    /// until the founder's signature sound arrives (one file, ≤30 s).
+    private static func makeAttributes() -> AlarmAttributes<UpTimeAlarmMetadata> {
         // "Dismiss" is the specification's own word; the alert title is the
         // marked placeholder until the curator rules.
         let stopButton = AlarmButton(
@@ -93,32 +154,10 @@ enum AlarmKitScheduler {
             title: LocalizedStringResource(stringLiteral: CuratorCopy.placeholderAlarmNotificationTitle),
             stopButton: stopButton
         )
-        let attributes = AlarmAttributes<UpTimeAlarmMetadata>(
+        return AlarmAttributes<UpTimeAlarmMetadata>(
             presentation: AlarmPresentation(alert: alert),
             tintColor: Color("brass")
         )
-        // Dismiss stops the ring AND opens the app into the morning.
-        let configuration = AlarmManager.AlarmConfiguration(
-            countdownDuration: nil,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: OpenMorningIntent()
-        )
-
-        // Replace, never stack: cancel any alarm already holding our id.
-        try? AlarmManager.shared.cancel(id: alarmUUID)
-
-        do {
-            _ = try await AlarmManager.shared.schedule(id: alarmUUID, configuration: configuration)
-        } catch {
-            UpTimeLog.alarm.error("[ALARM] AlarmKit schedule threw: \(String(reflecting: error), privacy: .public)")
-            throw error
-        }
-        UpTimeLog.alarm.notice("[ALARM] AlarmKit scheduled \(hour, privacy: .public):\(String(format: "%02d", minute), privacy: .public) alert-only")
-    }
-
-    static func cancel() {
-        try? AlarmManager.shared.cancel(id: alarmUUID)
     }
 }
 #endif
