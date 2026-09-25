@@ -128,33 +128,39 @@ struct DiscoverView: View {
                 .foregroundColor(Color("ink").opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                if let product = storeKit.product(for: journey.id) {
+            // The price AND the buy affordance exist only when the store can
+            // actually sell this journey. A card whose product is not in App
+            // Store Connect shows neither — never an unpriced button that
+            // errors on tap, never a figure the store will not charge.
+            // Invisible-to-buy is never invisible-to-see-or-own: the card,
+            // and any owned journey, are untouched.
+            if let product = storeKit.product(for: journey.id) {
+                HStack {
                     Text(product.displayPrice)
                         .font(.custom("PlayfairDisplay-SemiBold", size: 16))
                         .foregroundColor(Color("brass"))
-                }
 
-                Spacer()
+                    Spacer()
 
-                Button {
-                    Task { await buyJourney(journey) }
-                } label: {
-                    if isPurchasing {
-                        ProgressView()
-                            .tint(Color("paper"))
-                            .frame(width: 80, height: 36)
-                    } else {
-                        Text("Get It")
-                            .font(.custom("PlayfairDisplay-SemiBold", size: 15))
-                            .foregroundColor(Color("paper"))
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(Color("brass"))
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                    Button {
+                        Task { await buyJourney(journey) }
+                    } label: {
+                        if isPurchasing {
+                            ProgressView()
+                                .tint(Color("paper"))
+                                .frame(width: 80, height: 36)
+                        } else {
+                            Text("Get It")
+                                .font(.custom("PlayfairDisplay-SemiBold", size: 15))
+                                .foregroundColor(Color("paper"))
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Color("brass"))
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                        }
                     }
+                    .disabled(isPurchasing)
                 }
-                .disabled(isPurchasing)
             }
         }
         .padding(20)

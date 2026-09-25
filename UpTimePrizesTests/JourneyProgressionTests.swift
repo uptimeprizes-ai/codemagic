@@ -693,6 +693,26 @@ final class PrizeCopyTests: XCTestCase {
     }
 }
 
+// MARK: - Storefront honesty
+
+@MainActor
+final class StorefrontTests: XCTestCase {
+
+    /// No product in App Store Connect means nothing to price and nothing to
+    /// buy: product(for:) must return nil for every journey until iOS
+    /// product ids exist, which is what removes the buy affordance from a
+    /// card. Ownership (purchaseState) never flows through this path, so
+    /// invisible-to-buy can never mean invisible-to-own.
+    func testNoStoreProductsMeansNothingQuotedOrBuyable() {
+        let storeKit = StoreKitManager()
+        // products is empty until ASC returns real ids (none exist yet).
+        for journeyId in ["genesis", "cast-prelude", "warm-front", "daybreak-shuffle", "catalyst", "educator", "overture"] {
+            XCTAssertNil(storeKit.product(for: journeyId))
+            XCTAssertFalse(storeKit.isPurchased(journeyId))
+        }
+    }
+}
+
 // MARK: - Option B ring decisions (founder, 2026-09-15)
 
 final class RingDecisionTests: XCTestCase {
