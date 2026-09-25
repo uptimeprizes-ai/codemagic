@@ -1,21 +1,22 @@
+import Foundation
 import SwiftUI
 import SwiftData
 
 // MARK: - SettingsView
 //
-// The machine room (Android screen map §5): set the alarm, and the
-// machinery around it. It never lists a song and never sells anything.
+// The machine room (Android screen map §5, SettingsPage.kt): set the alarm,
+// and the machinery around it — each part on its own brass plaque, in
+// Android's order. It never lists a song and never sells anything.
 // Sections that point at owned things are absent until the ninth counted
-// Genesis morning. Copy is the shipping Android wording from the screen map.
+// Genesis morning. Copy is the shipping Android wording.
 //
 // Not yet here, pending their own passes: the Catalyst card and Special Day
 // scheduler (the Catalyst cannot be owned on iOS until product ids exist),
-// the permissions rows, and the "next sounds in …" line.
+// the theme selector, the permissions rows, and the alarm on/off toggle.
 
 struct SettingsView: View {
 
     @Environment(\.modelContext) private var context
-    @Query private var journeys: [JourneyEntity]
     @Query private var alarms: [AlarmEntity]
     @Query private var demoStates: [DemoStateEntity]
 
@@ -27,32 +28,36 @@ struct SettingsView: View {
     @State private var showDebug: Bool = false
 
     private var alarm: AlarmEntity? { alarms.first }
-    private var activeJourney: JourneyEntity? { journeys.first(where: { $0.isActive }) }
     private var catalogOpen: Bool {
         CatalogRules.isCatalogOpen(genesisCompletedDays: demoStates.first?.completedDays ?? 0)
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                newAlarmSection
-                activeAlarmsSection
-                snoozeSection
-                if catalogOpen, let journey = activeJourney {
-                    yourCatalogSection(journey)
+        ZStack {
+            PaperBackground()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    newAlarmCard
+                    snoozeCard
+
+                    SectionEyebrow(text: "ACTIVE ALARMS")
+                    activeAlarmCard
+
+                    if catalogOpen {
+                        SectionEyebrow(text: "YOUR CATALOG")
+                        yourCatalogCard
+                    }
+
+                    SectionEyebrow(text: "ABOUT")
+                    aboutCard
+
+                    Spacer().frame(height: 24)
                 }
-                aboutSection
-                #if DEBUG
-                Section("Developer") {
-                    Button("Open Debug Tools") { showDebug = true }
-                        .foregroundColor(Color("brass"))
-                }
-                #endif
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .scrollContentBackground(.hidden)
-            .background(Color("paper").ignoresSafeArea())
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .scrollIndicators(.hidden)
         }
         .onAppear(perform: loadAlarm)
         .sheet(isPresented: $showJourneySelector) {
@@ -65,133 +70,203 @@ struct SettingsView: View {
 
     // MARK: - ✦ NEW ALARM ✦
 
-    private var newAlarmSection: some View {
-        Section {
+    private var newAlarmCard: some View {
+        PlaqueCard {
+            ZStack(alignment: .top) {
+                HStack {
+                    BrassScrew(size: 8)
+                    Spacer()
+                    BrassScrew(size: 8)
+                }
+                .offset(y: -4)
+                Text("✦ NEW ALARM ✦")
+                    .font(.playfair(12, semibold: true))
+                    .tracking(2)
+                    .foregroundColor(BrassPaper.brassHighlight)
+                    .shadow(color: Color.black.opacity(0.60), radius: 1, x: 0, y: 1)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 12)
+            }
+
             DatePicker("", selection: $pickerTime, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
+                .colorScheme(.dark)
                 .frame(maxWidth: .infinity)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("REPEAT")
-                    .font(.custom("PlayfairDisplay-SemiBold", size: 12))
-                    .tracking(2)
-                    .foregroundColor(Color("ink").opacity(0.6))
-                HStack(spacing: 8) {
-                    ForEach(1...7, id: \.self) { day in
-                        Button { toggleRepeatDay(day) } label: {
-                            Text(dayAbbreviation(day))
-                                .font(.custom("PlayfairDisplay-Regular", size: 12))
-                                .foregroundColor(selectedRepeatDays.contains(day) ? Color("paper") : Color("ink").opacity(0.6))
-                                .frame(width: 34, height: 34)
-                                .background(selectedRepeatDays.contains(day) ? Color("brass") : Color("ink").opacity(0.08))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
+            Spacer().frame(height: 10)
+            Text("REPEAT")
+                .font(.playfair(11))
+                .tracking(2)
+                .foregroundColor(BrassPaper.eyebrow)
+            Spacer().frame(height: 6)
+            HStack(spacing: 6) {
+                ForEach(SettingsFormat.dayChips, id: \.value) { chip in
+                    let selected = selectedRepeatDays.contains(chip.value)
+                    Button { toggleRepeatDay(chip.value) } label: {
+                        chipLabel(chip.label, selected: selected, size: 12)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 6)
+                            .modifier(BrassChip(selected: selected, cornerRadius: 6))
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(.vertical, 4)
 
+            Spacer().frame(height: 14)
             Button(action: setAlarm) {
                 Text("SET ALARM")
-                    .font(.custom("PlayfairDisplay-SemiBold", size: 16))
-                    .tracking(2)
-                    .foregroundColor(Color("paper"))
+                    .font(.playfair(14, semibold: true))
+                    .tracking(4.2)
+                    .foregroundColor(BrassPaper.raisedInk)
+                    .shadow(color: BrassPaper.raisedLabelShadow, radius: 0, x: 0, y: 1)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color("brass"))
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .frame(height: 54)
+                    .raisedBrass(cornerRadius: 8)
             }
             .buttonStyle(.plain)
-        } header: {
-            Text("✦ NEW ALARM ✦")
+
+            Spacer().frame(height: 6)
+            Text(SettingsFormat.occurrenceText(
+                trigger: SettingsFormat.nextTrigger(hour: pickerParts.hour, minute: pickerParts.minute, repeatDays: Array(selectedRepeatDays)),
+                now: Date()
+            ))
+            .font(.playfair(12))
+            .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var pickerParts: (hour: Int, minute: Int) {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: pickerTime)
+        return (parts.hour ?? 7, parts.minute ?? 0)
+    }
+
+    // MARK: - Snooze Duration
+
+    private var snoozeCard: some View {
+        PlaqueCard {
+            Text("Snooze Duration")
+                .font(.playfair(18, semibold: true))
+                .foregroundColor(BrassPaper.brassHighlight.opacity(0.9))
+                .plaqueTextShadow()
+            Spacer().frame(height: 4)
+            Text(CuratorCopy.snoozeSubtitle)
+                .font(.playfair(14))
+                .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
+            Spacer().frame(height: 10)
+            HStack(spacing: 6) {
+                ForEach(AlarmEngine.snoozeOptions, id: \.self) { minutes in
+                    let selected = minutes == (alarm?.snoozeMinutes ?? AlarmEngine.defaultSnoozeMinutes)
+                    Button { setSnooze(minutes) } label: {
+                        chipLabel("\(minutes) min", selected: selected, size: 13)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 8)
+                            .modifier(BrassChip(selected: selected, cornerRadius: 100))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
     // MARK: - ACTIVE ALARMS
 
-    private var activeAlarmsSection: some View {
-        Section {
+    private var activeAlarmCard: some View {
+        PlaqueCard {
             if let alarm, alarm.isEnabled {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(timeString(hour: alarm.hour, minute: alarm.minute))
-                            .font(.custom("PlayfairDisplay-SemiBold", size: 22))
-                            .foregroundColor(Color("ink"))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(HomeFormat.clock(hour: alarm.hour, minute: alarm.minute))
+                            .font(.playfair(22, semibold: true))
+                            .foregroundColor(BrassPaper.brassHighlight.opacity(0.9))
+                            .plaqueTextShadow()
                         if !alarm.repeatDays.isEmpty {
-                            Text(alarm.repeatDays.sorted().map(dayAbbreviation).joined(separator: " "))
-                                .font(.custom("PlayfairDisplay-Regular", size: 13))
-                                .foregroundColor(Color("ink").opacity(0.6))
+                            Text(SettingsFormat.repeatDays(alarm.repeatDays))
+                                .font(.playfair(12))
+                                .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
                         }
                     }
                     Spacer()
-                    Button("Delete", role: .destructive, action: deleteAlarm)
-                        .buttonStyle(.borderless)
+                    Button(action: deleteAlarm) {
+                        Text("Delete")
+                            .font(.playfair(12))
+                            .foregroundColor(BrassPaper.brassHighlight)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 4)
+                    }
+                    .buttonStyle(.plain)
                 }
             } else {
                 Text("No alarms set yet. Your first alarm will live here.")
-                    .font(.custom("PlayfairDisplay-Regular", size: 14))
-                    .foregroundColor(Color("ink").opacity(0.6))
+                    .font(.playfair(13))
+                    .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
             }
-        } header: {
-            Text("ACTIVE ALARMS")
-        }
-    }
-
-    // MARK: - Snooze Duration
-
-    private var snoozeSection: some View {
-        Section {
-            Picker("Snooze Duration", selection: Binding(
-                get: { alarm?.snoozeMinutes ?? AlarmEngine.defaultSnoozeMinutes },
-                set: { newValue in
-                    alarm?.snoozeMinutes = newValue
-                    try? context.save()
-                }
-            )) {
-                ForEach(AlarmEngine.snoozeOptions, id: \.self) { minutes in
-                    Text("\(minutes) minutes").tag(minutes)
-                }
-            }
-        } footer: {
-            Text(CuratorCopy.snoozeSubtitle)
         }
     }
 
     // MARK: - YOUR CATALOG
 
-    private func yourCatalogSection(_ journey: JourneyEntity) -> some View {
-        Section {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active work")
-                        .font(.custom("PlayfairDisplay-Regular", size: 12))
-                        .foregroundColor(Color("ink").opacity(0.6))
-                    Text(journey.title)
-                        .font(.custom("PlayfairDisplay-SemiBold", size: 17))
-                        .foregroundColor(Color("ink"))
-                }
-                Spacer()
-                Button("Switch →") { showJourneySelector = true }
-                    .buttonStyle(.borderless)
-                    .foregroundColor(Color("brass"))
+    private var yourCatalogCard: some View {
+        Button { showJourneySelector = true } label: {
+            PlaqueCard {
+                Text("Active work")
+                    .font(.playfair(15, semibold: true))
+                    .foregroundColor(BrassPaper.brassHighlight.opacity(0.9))
+                    .plaqueTextShadow()
+                Spacer().frame(height: 4)
+                Text("Switch between owned works")
+                    .font(.playfair(12))
+                    .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
+                Spacer().frame(height: 6)
+                Text("Switch \u{2192}")
+                    .font(.playfair(13, semibold: true))
+                    .foregroundColor(BrassPaper.brassHighlight)
             }
-        } header: {
-            Text("YOUR CATALOG")
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - ABOUT
 
-    private var aboutSection: some View {
-        Section {
-            LabeledContent("UpTime Prizes", value: appVersion)
-            Link("Privacy Policy", destination: URL(string: "https://uptimeprizes.com/privacy")!)
-            Link("Support", destination: URL(string: "https://uptimeprizes.com/support")!)
-        } header: {
-            Text("ABOUT")
+    private var aboutCard: some View {
+        PlaqueCard {
+            Text("UpTime Prizes")
+                .font(.playfair(17, semibold: true))
+                .foregroundColor(BrassPaper.brassHighlight.opacity(0.9))
+                .plaqueTextShadow()
+            Spacer().frame(height: 4)
+            Text("A warm, slow-built morning experience. The reward is the melody; the alarm is the invitation.")
+                .font(.playfair(13))
+                .foregroundColor(BrassPaper.brassHighlight.opacity(0.85))
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+            #if DEBUG
+            Spacer().frame(height: 10)
+            Button { showDebug = true } label: {
+                Text("Debug tools")
+                    .font(.playfair(13, semibold: true))
+                    .foregroundColor(BrassPaper.brassHighlight)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+            #endif
+            Spacer().frame(height: 10)
+            Text("Version \(appVersion)")
+                .font(.playfair(11))
+                .foregroundColor(BrassPaper.brassHighlight.opacity(0.55))
         }
+    }
+
+    // MARK: - Pieces
+
+    private func chipLabel(_ text: String, selected: Bool, size: CGFloat) -> some View {
+        Text(text)
+            .font(.playfair(size, semibold: selected))
+            .foregroundColor(selected ? BrassPaper.raisedInk : BrassPaper.brass2.opacity(0.6))
+            .shadow(color: selected ? BrassPaper.raisedLabelShadow : Color.clear, radius: 0, x: 0, y: 1)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     // MARK: - Actions
@@ -204,9 +279,9 @@ struct SettingsView: View {
 
     private func setAlarm() {
         guard let alarm else { return }
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: pickerTime)
-        alarm.hour = parts.hour ?? 7
-        alarm.minute = parts.minute ?? 0
+        let parts = pickerParts
+        alarm.hour = parts.hour
+        alarm.minute = parts.minute
         alarm.repeatDays = selectedRepeatDays.sorted()
         alarm.isEnabled = true
         try? context.save()
@@ -220,6 +295,12 @@ struct SettingsView: View {
         alarmEngine.cancelAlarm()
     }
 
+    private func setSnooze(_ minutes: Int) {
+        guard let alarm else { return }
+        alarm.snoozeMinutes = minutes
+        try? context.save()
+    }
+
     private func toggleRepeatDay(_ day: Int) {
         if selectedRepeatDays.contains(day) {
             selectedRepeatDays.remove(day)
@@ -228,21 +309,96 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Formatting
-
-    private func dayAbbreviation(_ day: Int) -> String {
-        ["S", "M", "T", "W", "T", "F", "S"][day - 1]
-    }
-
-    private func timeString(hour: Int, minute: Int) -> String {
-        let h = hour % 12 == 0 ? 12 : hour % 12
-        return "\(h):\(String(format: "%02d", minute)) \(hour < 12 ? "AM" : "PM")"
-    }
-
     private var appVersion: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
         return "\(version) (\(build))"
+    }
+}
+
+/// A day chip or snooze pill: raised brass when chosen, sunken when not.
+private struct BrassChip: ViewModifier {
+    let selected: Bool
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        if selected {
+            content.raisedBrass(cornerRadius: cornerRadius)
+        } else {
+            content.sunkenBrass(cornerRadius: cornerRadius)
+        }
+    }
+}
+
+// MARK: - SettingsFormat
+//
+// Settings' strings, computed as Android computes them. Pure, so tested.
+
+enum SettingsFormat {
+    struct DayChip {
+        let label: String
+        let value: Int
+    }
+
+    static let dayChips = [
+        DayChip(label: "Sun", value: 1), DayChip(label: "Mon", value: 2), DayChip(label: "Tue", value: 3),
+        DayChip(label: "Wed", value: 4), DayChip(label: "Thu", value: 5), DayChip(label: "Fri", value: 6),
+        DayChip(label: "Sat", value: 7)
+    ]
+
+    /// "Mon, Wed, Fri"
+    static func repeatDays(_ days: [Int]) -> String {
+        days.sorted().compactMap { day in dayChips.first(where: { $0.value == day })?.label }.joined(separator: ", ")
+    }
+
+    /// When an alarm set to this time and these days will next sound.
+    static func nextTrigger(hour: Int, minute: Int, repeatDays: [Int], now: Date = Date(), calendar: Calendar = .current) -> Date {
+        var trigger = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: now) ?? now
+        if trigger <= now {
+            trigger = calendar.date(byAdding: .day, value: 1, to: trigger) ?? trigger
+        }
+        if !repeatDays.isEmpty {
+            for _ in 0..<7 {
+                if repeatDays.contains(calendar.component(.weekday, from: trigger)) { break }
+                trigger = calendar.date(byAdding: .day, value: 1, to: trigger) ?? trigger
+            }
+        }
+        return trigger
+    }
+
+    /// "Tomorrow morning · in 19h 21m"
+    static func occurrenceText(trigger: Date, now: Date, calendar: Calendar = .current) -> String {
+        let diffMinutes = Int(trigger.timeIntervalSince(now) / 60)
+        guard trigger > now else { return "Now" }
+        let hours = diffMinutes / 60
+        let minutes = diffMinutes % 60
+
+        let dayPart: String
+        if calendar.isDate(trigger, inSameDayAs: now) {
+            dayPart = "Today"
+        } else if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDate(trigger, inSameDayAs: tomorrow) {
+            dayPart = "Tomorrow"
+        } else {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.dateFormat = "EEEE"
+            dayPart = formatter.string(from: trigger)
+        }
+
+        let hour = calendar.component(.hour, from: trigger)
+        let timePart = hour < 12 ? "morning" : (hour < 17 ? "afternoon" : "evening")
+
+        let relPart: String
+        if hours > 0 && minutes > 0 {
+            relPart = "in \(hours)h \(minutes)m"
+        } else if hours > 0 {
+            relPart = "in \(hours)h"
+        } else if minutes > 0 {
+            relPart = "in \(minutes)m"
+        } else {
+            relPart = "now"
+        }
+        return "\(dayPart) \(timePart) · \(relPart)"
     }
 }
 

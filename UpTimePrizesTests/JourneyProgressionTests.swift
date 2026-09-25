@@ -703,48 +703,96 @@ final class CatalogRulesTests: XCTestCase {
                                   purchaseState: state, sortOrder: order)
     }
 
-    func testCatalogHiddenUntilTheNinthCountedMorning() {
-        let journeys = [j("genesis", done: 8, active: true, state: "ACTIVE_IN_PROGRESS")]
-        XCTAssertTrue(CatalogRules.catalogRows(journeys, genesisCompletedDays: 8).isEmpty)
-        XCTAssertEqual(CatalogRules.catalogRows(journeys, genesisCompletedDays: 9).map(\.id), ["genesis"])
+    func testCatalogHiddenUntilTheNinthCountedMorningAndUntilSomethingIsOwned() {
+        let owned = [
+            j("genesis", done: 9, active: true, state: "ACTIVE_IN_PROGRESS"),
+            j("warm-front", state: "ACTIVE_IN_PROGRESS", order: 2)
+        ]
+        XCTAssertFalse(CatalogRules.showsCatalog(owned, genesisCompletedDays: 8))
+        XCTAssertTrue(CatalogRules.showsCatalog(owned, genesisCompletedDays: 9))
+        // Day nine alone does not open it: nothing is owned yet.
+        let nothingOwned = [j("genesis", done: 9, active: true, state: "ACTIVE_IN_PROGRESS"), j("overture", order: 6)]
+        XCTAssertFalse(CatalogRules.showsCatalog(nothingOwned, genesisCompletedDays: 9))
+        // The Catalyst alone is enough.
+        XCTAssertTrue(CatalogRules.showsCatalog([j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK")], genesisCompletedDays: 9))
     }
 
-    func testCatalogIsGenesisFirstThenOwnedInSortOrderNeverUnowned() {
+    func testOwnedRowsAreInSortOrderAndNeverGenesisCatalystOrUnowned() {
         let journeys = [
             j("warm-front", state: "ACTIVE_IN_PROGRESS", order: 2),
             j("overture", state: "NOT_OWNED", order: 6),
             j("genesis", done: 9, state: "UNLOCKED_FOR_PLAYBACK", order: 0),
+            j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK", order: 4),
             j("cast-prelude", state: "UNLOCKED_FOR_PLAYBACK", order: 1)
         ]
-        XCTAssertEqual(CatalogRules.catalogRows(journeys, genesisCompletedDays: 9).map(\.id),
-                       ["genesis", "cast-prelude", "warm-front"])
+        XCTAssertEqual(CatalogRules.ownedRows(journeys).map(\.id), ["cast-prelude", "warm-front"])
+        XCTAssertTrue(CatalogRules.isCatalystOwned(journeys))
     }
 
-    func testSongsOnlyWhenFinishedExceptCatalystWhenOwned() {
+    func testSongsOnlyWhenFinishedExceptCatalystWhenOwnedAndNeverGenesis() {
         XCTAssertFalse(CatalogRules.songsVisible(j("warm-front", done: 4, state: "ACTIVE_IN_PROGRESS")))
         XCTAssertTrue(CatalogRules.songsVisible(j("warm-front", done: 9, state: "UNLOCKED_FOR_PLAYBACK")))
         XCTAssertTrue(CatalogRules.songsVisible(j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK")))
         XCTAssertFalse(CatalogRules.songsVisible(j("catalyst", total: 5, state: "NOT_OWNED")))
+        XCTAssertFalse(CatalogRules.songsVisible(j("genesis", done: 9, state: "UNLOCKED_FOR_PLAYBACK")))
     }
 
-    func testRowPills() {
-        XCTAssertEqual(CatalogRules.rowPill(j("genesis", state: "ACTIVE_IN_PROGRESS")), "Free")
-        XCTAssertEqual(CatalogRules.rowPill(j("genesis", done: 3, state: "ACTIVE_IN_PROGRESS")), "Day 4 of 9")
-        XCTAssertEqual(CatalogRules.rowPill(j("genesis", done: 9, state: "UNLOCKED_FOR_PLAYBACK")), "Complete")
-        XCTAssertEqual(CatalogRules.rowPill(j("catalyst", total: 5, state: "UNLOCKED_FOR_PLAYBACK")), "Owned")
-        XCTAssertEqual(CatalogRules.rowPill(j("warm-front", done: 2, active: true, state: "ACTIVE_IN_PROGRESS")), "Day 3 of 9")
-        XCTAssertEqual(CatalogRules.rowPill(j("warm-front", done: 2, active: false, state: "ACTIVE_IN_PROGRESS")), "Owned")
+    func testGenesisPill() {
+        XCTAssertEqual(CatalogRules.genesisPill(completedDays: 0, currentDay: 1, isActive: true),
+                       CatalogRules.Pill(label: "Free", style: .price))
+        XCTAssertEqual(CatalogRules.genesisPill(completedDays: 3, currentDay: 4, isActive: true),
+                       CatalogRules.Pill(label: "Day 4 of 9", style: .active))
+        XCTAssertEqual(CatalogRules.genesisPill(completedDays: 9, currentDay: 10, isActive: true),
+                       CatalogRules.Pill(label: "Complete", style: .active))
+    }
+
+    func testJourneyPills() {
+        XCTAssertEqual(CatalogRules.journeyPill(j("warm-front", done: 2, active: true, state: "ACTIVE_IN_PROGRESS")).label, "Active")
+        XCTAssertEqual(CatalogRules.journeyPill(j("warm-front", done: 2, active: false, state: "ACTIVE_IN_PROGRESS")).label, "Owned")
+        XCTAssertEqual(CatalogRules.journeyPill(j("warm-front", done: 9, state: "UNLOCKED_FOR_PLAYBACK")).label, "Complete")
     }
 
     func testDayPillNeverPrintsPastTheEndAndCompleteStandsAlone() {
-        XCTAssertEqual(CatalogRules.dayPill(j("genesis", done: 3, state: "ACTIVE_IN_PROGRESS")), "DAY 4 / 9")
-        XCTAssertEqual(CatalogRules.dayPill(j("genesis", done: 33, state: "UNLOCKED_FOR_PLAYBACK")), "COMPLETE")
+        let genesis = j("genesis", done: 3, active: true, state: "ACTIVE_IN_PROGRESS")
+        let day = CatalogRules.dayCount(genesis, genesisCurrentDay: 4, countedToday: true)
+        XCTAssertEqual(CatalogRules.dayPill(genesis, dayCount: day), "DAY 4 / 9")
+        let finished = j("genesis", done: 33, state: "UNLOCKED_FOR_PLAYBACK")
+        XCTAssertEqual(CatalogRules.dayPill(finished, dayCount: 34), "COMPLETE")
+    }
+
+    func testAJourneyShowsTodaysMorningOnceCountedOtherwiseTheNext() {
+        let warm = j("warm-front", done: 2, active: true, state: "ACTIVE_IN_PROGRESS")
+        XCTAssertEqual(CatalogRules.dayCount(warm, genesisCurrentDay: 10, countedToday: true), 2)
+        XCTAssertEqual(CatalogRules.dayCount(warm, genesisCurrentDay: 10, countedToday: false), 3)
+        XCTAssertEqual(CatalogRules.progress(dayCount: 3, totalDays: 9), 3.0 / 9.0, accuracy: 0.0001)
+        XCTAssertEqual(CatalogRules.progress(dayCount: 40, totalDays: 9), 1)
+    }
+
+    func testHomeFormatting() {
+        XCTAssertEqual(HomeFormat.clock(hour: 7, minute: 5), "7:05 AM")
+        XCTAssertEqual(HomeFormat.clock(hour: 0, minute: 0), "12:00 AM")
+        XCTAssertEqual(HomeFormat.clock(hour: 13, minute: 34), "1:34 PM")
+        XCTAssertEqual(HomeFormat.repeatLine([6, 2, 4]), "·  MON  WED  FRI  ·")
+    }
+
+    func testSettingsNextSoundsLine() {
+        let cal = Calendar(identifier: .gregorian)
+        let now = cal.date(from: DateComponents(timeZone: .current, year: 2026, month: 9, day: 25, hour: 13, minute: 0))!
+        let tomorrow = SettingsFormat.nextTrigger(hour: 7, minute: 0, repeatDays: [], now: now, calendar: cal)
+        XCTAssertEqual(SettingsFormat.occurrenceText(trigger: tomorrow, now: now, calendar: cal), "Tomorrow morning · in 18h")
+        let later = SettingsFormat.nextTrigger(hour: 13, minute: 30, repeatDays: [], now: now, calendar: cal)
+        XCTAssertEqual(SettingsFormat.occurrenceText(trigger: later, now: now, calendar: cal), "Today afternoon · in 30m")
+        // 2026-09-25 is a Friday; Mondays only → Monday the 28th.
+        let monday = SettingsFormat.nextTrigger(hour: 7, minute: 15, repeatDays: [2], now: now, calendar: cal)
+        XCTAssertEqual(SettingsFormat.occurrenceText(trigger: monday, now: now, calendar: cal), "Monday morning · in 66h 15m")
+        XCTAssertEqual(SettingsFormat.repeatDays([6, 2, 4]), "Mon, Wed, Fri")
     }
 
     func testDiscoverCountdownLine() {
-        XCTAssertEqual(DiscoverView.countdownLine(remaining: 8), "Eight more mornings…")
-        XCTAssertEqual(DiscoverView.countdownLine(remaining: 2), "Two more mornings…")
-        XCTAssertEqual(DiscoverView.countdownLine(remaining: 1), "Tomorrow.")
+        XCTAssertEqual(DiscoverView.countdownLine(currentDay: 1), "Eight more mornings until you meet the rest of UpTime Prizes.")
+        XCTAssertEqual(DiscoverView.countdownLine(currentDay: 4), "Five more mornings until you meet the rest of UpTime Prizes.")
+        XCTAssertEqual(DiscoverView.countdownLine(currentDay: 8), "Tomorrow.")
+        XCTAssertEqual(DiscoverView.countdownLine(currentDay: 9), "Today.")
     }
 }
 

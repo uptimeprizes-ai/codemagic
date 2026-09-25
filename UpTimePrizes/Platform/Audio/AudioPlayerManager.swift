@@ -85,6 +85,8 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         onFinished: (() -> Void)? = nil
     ) -> Bool {
         stopAll()
+        // The alarm always wins over music the person was playing.
+        LibraryPlayer.shared.stop()
 
         // Re-activate audio session immediately before playback
         activateAlarmAudioSession()

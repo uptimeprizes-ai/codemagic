@@ -39,21 +39,24 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if isUnlocked {
-                        unlockedContent
-                    } else {
-                        lockedContent
+            Group {
+                if isUnlocked {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            unlockedContent
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 32)
                     }
+                } else {
+                    lockedContent
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
-            .background(Color("paper").ignoresSafeArea())
+            .background(PaperBackground())
             .navigationTitle("Discover")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar(isUnlocked ? .visible : .hidden, for: .navigationBar)
         }
         .alert("Purchase Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -65,38 +68,44 @@ struct DiscoverView: View {
     // MARK: - Locked content
 
     private var lockedContent: some View {
+        // Android DiscoverLockedPlaceholder: before the ninth counted Genesis
+        // morning, three lines and nothing else — never a price, a product
+        // name, or a track count.
         VStack(spacing: 20) {
-            Spacer().frame(height: 40)
-
-            Image(systemName: "lock.fill")
-                .font(.system(size: 40))
-                .foregroundColor(Color("brass"))
-
-            // Screen map §4 (shipping Android copy): before the ninth counted
-            // Genesis morning, a placeholder and a countdown — never a price,
-            // a product name, or a track count.
             Text("The catalog opens on day nine.")
-                .font(.custom("PlayfairDisplay-SemiBold", size: 20))
-                .foregroundColor(Color("ink"))
-                .multilineTextAlignment(.center)
-
-            Text(Self.countdownLine(remaining: max(0, 9 - (demoState?.completedDays ?? 0))))
-                .font(.custom("PlayfairDisplay-Regular", size: 15))
-                .foregroundColor(Color("ink").opacity(0.7))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
+                .font(.playfair(22, semibold: true))
+                .foregroundColor(BrassPaper.ink)
+                .lineSpacing(8)
+                .shadow(color: Color.white.opacity(0.6), radius: 1, x: 0, y: 1.5)
+            Text(Self.countdownLine(currentDay: demoState?.currentDay ?? 1))
+                .font(.playfair(16))
+                .foregroundColor(BrassPaper.inkSoft)
+                .lineSpacing(8)
+            Text("Until then, the genesis songs are yours, and we hope you enjoy them.")
+                .font(.playfair(14))
+                .foregroundColor(BrassPaper.inkSoft)
+                .lineSpacing(10)
         }
-        .padding(.horizontal, 16)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// "Eight more mornings…", counting down to "Tomorrow." (screen map §4).
-    nonisolated static func countdownLine(remaining: Int) -> String {
-        if remaining <= 1 { return "Tomorrow." }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .spellOut
-        formatter.locale = Locale(identifier: "en_US")
-        let word = formatter.string(from: NSNumber(value: remaining)) ?? "\(remaining)"
-        return String(word.prefix(1)).uppercased() + String(word.dropFirst()) + " more mornings…"
+    /// The middle line, keyed on the Genesis morning the person is on —
+    /// Android's wording, day for day.
+    nonisolated static func countdownLine(currentDay: Int) -> String {
+        switch currentDay {
+        case 1: return "Eight more mornings until you meet the rest of UpTime Prizes."
+        case 2: return "Seven more mornings until you meet the rest of UpTime Prizes."
+        case 3: return "Six more mornings until you meet the rest of UpTime Prizes."
+        case 4: return "Five more mornings until you meet the rest of UpTime Prizes."
+        case 5: return "Four more mornings until you meet the rest of UpTime Prizes."
+        case 6: return "Three more mornings until you meet the rest of UpTime Prizes."
+        case 7: return "Two more mornings until you meet the rest of UpTime Prizes."
+        case 8: return "Tomorrow."
+        case 9: return "Today."
+        default: return ""
+        }
     }
 
     // MARK: - Unlocked content
