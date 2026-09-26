@@ -2,33 +2,62 @@ import Foundation
 import StoreKit
 import SwiftData
 
-// MARK: - StoreKitManager
+// MARK: - StoreCatalog
+//
+// Which store ids the app asks for, and which journey an owned id belongs
+// to. Built from the manifest (single source of truth), never hand-written.
+//
+// A product id can never be renamed, and the store reports the id a purchase
+// was made under forever. So restore recognises a journey's current id OR any
+// retired one (`legacyProductIds`), while the store is only ever ASKED for
+// current ids — a withdrawn product can never reappear in the storefront.
+//
+// NOTE: the manifest carries Android's Play product ids. App Store Connect is
+// its own namespace; which ids exist there is the founder's open ruling.
+// Until then no product resolves on iOS — and the log says so, every launch.
 
-/// Manages StoreKit 2 product fetching, purchasing, and entitlement persistence.
-///
-/// Bug 2 fix: When a purchase is restored (e.g., after reinstall), applyEntitlement()
-/// now also updates DemoStateEntity so the Discovery tab unlocks correctly — not just
-/// the journey's purchaseState. This prevents the two state systems from getting out
-/// of sync.
+struct StoreCatalog: Equatable {
+    /// Current product id → journeyId. The only ids the store is asked for.
+    let current: [String: String]
+    /// Every id a purchase may have been made under → journeyId.
+    let owned: [String: String]
+
+    init(journeys: [ManifestJourney]) {
+        var current: [String: String] = [:]
+        var owned: [String: String] = [:]
+        for journey in journeys {
+            if !journey.productId.isEmpty {
+                current[journey.productId] = journey.journeyId
+                owned[journey.productId] = journey.journeyId
+            }
+            for legacy in journey.legacyProductIds ?? [] where !legacy.isEmpty {
+                owned[legacy] = journey.journeyId
+            }
+        }
+        self.current = current
+        self.owned = owned
+    }
+
+    /// The ids to ask the store for, in a stable order for the log.
+    var queryIds: [String] { current.keys.sorted() }
+
+    func journeyId(forOwnedProductId productId: String) -> String? { owned[productId] }
+
+    func currentProductId(forJourneyId journeyId: String) -> String? {
+        current.first(where: { $0.value == journeyId })?.key
+    }
+}
+
+// MARK: - StoreKitManager
+//
+// Every step of the purchase path announces itself in the device log under
+// [STORE], on success as loudly as on failure (App Builder, 2026-09-26: on
+// Android the silent success case hid a path that never ran for months).
+
 @MainActor
 class StoreKitManager: ObservableObject {
 
-    // MARK: - Product ID → Journey ID mapping
-    //
-    // Built from the manifest (single source of truth), never hand-written.
-    // NOTE: the manifest currently carries Android's live Play product IDs.
-    // App Store Connect is its own namespace; which IDs exist there — and
-    // whether iOS follows journey_<name> — is the founder's open ruling.
-    // Until then, no product will resolve on iOS; that is expected.
-
-    static let productJourneyMap: [String: String] = {
-        guard let manifest = UpTimeManifest.loadFromBundle() else { return [:] }
-        var map: [String: String] = [:]
-        for journey in manifest.journeys where !journey.productId.isEmpty {
-            map[journey.productId] = journey.journeyId
-        }
-        return map
-    }()
+    static let catalog = StoreCatalog(journeys: UpTimeManifest.loadFromBundle()?.journeys ?? [])
 
     // MARK: - Published state
 
@@ -66,27 +95,41 @@ class StoreKitManager: ObservableObject {
     func fetchProducts() async {
         isLoading = true
         defer { isLoading = false }
+        let ids = Self.catalog.queryIds
+        UpTimeLog.store.notice("[STORE] asking the App Store for \(ids.count, privacy: .public) product(s): \(ids.joined(separator: ", "), privacy: .public)")
         do {
-            let productIds = Array(Self.productJourneyMap.keys)
-            products = try await Product.products(for: productIds)
+            products = try await Product.products(for: ids)
+            let answered = products.map { "\($0.id)=\($0.displayPrice)" }.sorted().joined(separator: ", ")
+            UpTimeLog.store.notice("[STORE] App Store answered with \(self.products.count, privacy: .public)/\(ids.count, privacy: .public): \(answered.isEmpty ? "none" : answered, privacy: .public)")
+            let missing = Set(ids).subtracting(products.map(\.id)).sorted()
+            if !missing.isEmpty {
+                UpTimeLog.store.notice("[STORE] not found in App Store Connect: \(missing.joined(separator: ", "), privacy: .public)")
+            }
         } catch {
-            print("[StoreKitManager] Failed to fetch products: \(error)")
+            UpTimeLog.store.error("[STORE] product request failed: \(error, privacy: .public)")
         }
     }
 
     // MARK: - Purchase
 
     func purchase(_ product: Product) async throws -> Transaction? {
+        UpTimeLog.store.notice("[STORE] purchase started: \(product.id, privacy: .public) \(product.displayPrice, privacy: .public)")
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
             await transaction.finish()
-            await applyEntitlement(productID: product.id)
+            UpTimeLog.store.notice("[STORE] purchase verified: \(product.id, privacy: .public)")
+            applyEntitlement(productID: product.id, isNewPurchase: true)
             return transaction
-        case .userCancelled, .pending:
+        case .userCancelled:
+            UpTimeLog.store.notice("[STORE] purchase cancelled: \(product.id, privacy: .public)")
+            return nil
+        case .pending:
+            UpTimeLog.store.notice("[STORE] purchase pending approval: \(product.id, privacy: .public)")
             return nil
         @unknown default:
+            UpTimeLog.store.notice("[STORE] purchase ended with an unknown result: \(product.id, privacy: .public)")
             return nil
         }
     }
@@ -94,20 +137,29 @@ class StoreKitManager: ObservableObject {
     // MARK: - Restore purchases
 
     func restorePurchases() async {
+        var ownedIds: [String] = []
         for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                await applyEntitlement(productID: transaction.productID)
+            switch result {
+            case .verified(let transaction):
+                ownedIds.append(transaction.productID)
+                applyEntitlement(productID: transaction.productID, isNewPurchase: false)
+            case .unverified(let transaction, let error):
+                UpTimeLog.store.error("[STORE] unverified entitlement ignored: \(transaction.productID, privacy: .public) \(error, privacy: .public)")
             }
         }
+        UpTimeLog.store.notice("[STORE] App Store reports \(ownedIds.count, privacy: .public) owned purchase(s): \(ownedIds.isEmpty ? "none" : ownedIds.sorted().joined(separator: ", "), privacy: .public)")
     }
 
-    // MARK: - Transaction listener (handles pending → completed)
+    // MARK: - Transaction listener (purchases completed outside the app)
 
     private func listenForTransactions() -> Task<Void, Never> {
         Task(priority: .background) {
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
-                    await self.applyEntitlement(productID: transaction.productID)
+                    await MainActor.run {
+                        UpTimeLog.store.notice("[STORE] transaction update: \(transaction.productID, privacy: .public)")
+                        self.applyEntitlement(productID: transaction.productID, isNewPurchase: true)
+                    }
                     await transaction.finish()
                 }
             }
@@ -116,58 +168,44 @@ class StoreKitManager: ObservableObject {
 
     // MARK: - Entitlement application
 
-    /// Updates the JourneyEntity matching this product ID.
-    /// Sets purchaseState to ACTIVE_IN_PROGRESS and activates the journey.
-    /// Deactivates all other journeys.
-    /// Catalyst Tracks (SPECIAL_DAY) are immediately UNLOCKED_FOR_PLAYBACK.
+    /// Marks the journey an owned product belongs to as owned.
     ///
-    /// Bug 2 fix: Also updates DemoStateEntity to unlock the Discovery tab
-    /// when any purchase is restored. This ensures the two state systems
-    /// (billing state and progression state) stay in sync on reinstall.
-    private func applyEntitlement(productID: String) async {
-        guard let journeyId = Self.productJourneyMap[productID],
-              let context = context else { return }
+    /// A new purchase also makes that journey the active one (only one is
+    /// active at a time; every journey keeps its own progress). A restore —
+    /// which runs on every launch — never changes which journey is active,
+    /// never moves a journey backwards, and never touches The Genesis: the
+    /// catalog gate counts completed Genesis mornings, never ownership.
+    private func applyEntitlement(productID: String, isNewPurchase: Bool) {
+        guard let journeyId = Self.catalog.journeyId(forOwnedProductId: productID) else {
+            UpTimeLog.store.error("[STORE] owned product matches no journey: \(productID, privacy: .public)")
+            return
+        }
+        guard let context else { return }
 
         purchasedProductIDs.insert(productID)
 
-        let fetchJourneys = FetchDescriptor<JourneyEntity>()
-        guard let journeys = try? context.fetch(fetchJourneys) else { return }
+        guard let journeys = try? context.fetch(FetchDescriptor<JourneyEntity>()),
+              let purchased = journeys.first(where: { $0.id == journeyId }) else { return }
 
-        // Find the purchased journey
-        guard let purchased = journeys.first(where: { $0.id == journeyId }) else { return }
-
-        // Determine new state. Identity is journeyId — never a journey "type".
-        let newState: String
-        if purchased.id == "catalyst" {
-            // The Catalyst Tracks: playable immediately, no cycle
-            newState = "UNLOCKED_FOR_PLAYBACK"
-        } else {
-            // Journeys with a morning cycle: begin (or resume) progression
-            newState = purchased.completedDays >= purchased.totalDays
-                ? "UNLOCKED_FOR_PLAYBACK"
-                : "ACTIVE_IN_PROGRESS"
+        if purchased.purchaseState == "NOT_OWNED" {
+            if purchased.id == "catalyst" {
+                // The Catalyst Tracks: playable immediately, no cycle.
+                purchased.purchaseState = "UNLOCKED_FOR_PLAYBACK"
+            } else {
+                purchased.purchaseState = purchased.completedDays >= purchased.totalDays
+                    ? "UNLOCKED_FOR_PLAYBACK"
+                    : "ACTIVE_IN_PROGRESS"
+            }
         }
 
-        purchased.purchaseState = newState
-
-        // Activate this journey, deactivate all others
-        for journey in journeys {
-            journey.isActive = journey.id == journeyId
-        }
-
-        // Bug 2 fix: Unlock the Discovery tab by advancing demo state past the gate.
-        // The Discover tab is gated on demoState.completedDays >= 9.
-        // When a purchase exists, the user has already earned access — unlock it.
-        let fetchDemo = FetchDescriptor<DemoStateEntity>()
-        if let demo = try? context.fetch(fetchDemo).first {
-            if demo.completedDays < 9 {
-                demo.completedDays = 9
-                demo.isPurchaseOffered = true
-                print("[StoreKitManager] Bug 2 fix: Advanced demo state to day 9 to unlock Discovery tab.")
+        if isNewPurchase && purchased.id != "catalyst" {
+            for journey in journeys {
+                journey.isActive = journey.id == journeyId
             }
         }
 
         try? context.save()
+        UpTimeLog.store.notice("[STORE] entitlement applied: \(productID, privacy: .public) → \(journeyId, privacy: .public) state=\(purchased.purchaseState, privacy: .public) newPurchase=\(isNewPurchase, privacy: .public)")
     }
 
     // MARK: - Verification helper
@@ -184,13 +222,12 @@ class StoreKitManager: ObservableObject {
     // MARK: - Helpers
 
     func product(for journeyId: String) -> Product? {
-        let productId = Self.productJourneyMap.first(where: { $0.value == journeyId })?.key
+        guard let productId = Self.catalog.currentProductId(forJourneyId: journeyId) else { return nil }
         return products.first(where: { $0.id == productId })
     }
 
     func isPurchased(_ journeyId: String) -> Bool {
-        let productId = Self.productJourneyMap.first(where: { $0.value == journeyId })?.key ?? ""
-        return purchasedProductIDs.contains(productId)
+        purchasedProductIDs.contains { Self.catalog.journeyId(forOwnedProductId: $0) == journeyId }
     }
 }
 

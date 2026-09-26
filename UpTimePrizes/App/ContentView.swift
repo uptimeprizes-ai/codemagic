@@ -229,7 +229,7 @@ struct ContentView: View {
         let engine = AlarmEngine(context: context)
         alarmEngine = engine
 
-        // Configure StoreKit with model context (Bug 2 fix is inside applyEntitlement)
+        // Configure StoreKit with the model context: fetch products, restore purchases.
         storeKit.configure(context: context)
 
         // Bug 1 fix: Reschedule alarm from persisted state on first launch

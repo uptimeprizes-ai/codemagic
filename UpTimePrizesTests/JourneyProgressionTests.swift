@@ -163,6 +163,20 @@ final class BundledManifestTests: XCTestCase {
         }.count
         XCTAssertEqual(placeholderCount, 0, "Found placeholder regions — real measurements required")
     }
+
+    /// The manifest is Android's, byte for byte (App Builder, 2026-09-26:
+    /// supersedes 90a330dc…). A hand edit on iOS fails here.
+    func testBundledManifestIsAndroidsExactFile() throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "uptime_full_manifest", withExtension: "json"))
+        let data = try Data(contentsOf: url)
+        XCTAssertEqual(data.count, 54_021)
+        let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(digest, "7068db701f4036ddd9ebd33d55ecd07931db80b25a7c211efe1570a6bb83bac4",
+                       "uptime_full_manifest.json is not the App Builder's current file")
+        let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
+        XCTAssertEqual(manifest.journey(withId: "overture")?.description,
+                       "Forty-eight original songs, one each morning, across forty-nine mornings. The longest work in the catalog.")
+    }
 }
 
 // MARK: - Bundled audio
@@ -977,6 +991,27 @@ final class StorefrontTests: XCTestCase {
     /// product ids exist, which is what removes the buy affordance from a
     /// card. Ownership (purchaseState) never flows through this path, so
     /// invisible-to-buy can never mean invisible-to-own.
+    /// The store is asked only for current ids; restore recognises current
+    /// and retired ids alike (App Builder, 2026-09-26).
+    func testRetiredProductIdsRestoreButAreNeverAskedFor() throws {
+        let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
+        let catalog = StoreCatalog(journeys: manifest.journeys)
+        XCTAssertEqual(catalog.queryIds, [
+            "com.uptime.prizes.signature.daybreak_shuffle", "com.uptime.prizes.signature.warm_front",
+            "journey_cast_prelude", "journey_catalyst", "journey_overture"
+        ])
+        XCTAssertFalse(catalog.queryIds.contains("com.uptime.prizes.signature"))
+        XCTAssertFalse(catalog.queryIds.contains("com.uptime.prizes.special_day"))
+        XCTAssertEqual(catalog.journeyId(forOwnedProductId: "journey_cast_prelude"), "cast-prelude")
+        XCTAssertEqual(catalog.journeyId(forOwnedProductId: "com.uptime.prizes.signature"), "cast-prelude")
+        XCTAssertEqual(catalog.journeyId(forOwnedProductId: "com.uptime.prizes.special_day"), "catalyst")
+        XCTAssertNil(catalog.journeyId(forOwnedProductId: "something.else"))
+        // Genesis and The Teacher are never sold.
+        XCTAssertNil(catalog.currentProductId(forJourneyId: "genesis"))
+        XCTAssertNil(catalog.currentProductId(forJourneyId: "educator"))
+        XCTAssertEqual(catalog.currentProductId(forJourneyId: "overture"), "journey_overture")
+    }
+
     func testNoStoreProductsMeansNothingQuotedOrBuyable() {
         let storeKit = StoreKitManager()
         // products is empty until ASC returns real ids (none exist yet).
