@@ -30,6 +30,22 @@ struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
         // ringing; stopping the other is a harmless no-op.
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.alarmUUID)
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.snoozeUUID)
+
+        // Founder ruling 2026-09-26: more than 30 minutes after the ring,
+        // Dismiss only clears the alarm. Nothing starts, nothing counts; the
+        // app reports the morning missed when it opens.
+        let now = Date()
+        if UnattendedMorning.isLateAnswer(
+            now: now,
+            occurrence: AlarmRingLog.mostRecentOccurrence(before: now),
+            lastSnoozeReturnAt: AlarmRingLog.lastSnoozeReturnAt
+        ) {
+            await MainActor.run {
+                UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed more than 30 min after the ring — not an answer, not counted")
+            }
+            return .result()
+        }
+
         AlarmRingLog.recordAnswered()
         PendingMorningStart.record()
         await MainActor.run {
