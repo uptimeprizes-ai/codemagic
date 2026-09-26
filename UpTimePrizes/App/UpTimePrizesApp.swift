@@ -7,8 +7,10 @@ struct UpTimePrizesApp: App {
 
     // MARK: - Shared objects
 
-    @StateObject private var audioManager = AudioPlayerManager()
-    @StateObject private var stageCoordinator = StageCoordinator()
+    // Shared with the lock-screen Dismiss (MorningStarter), so a morning
+    // started there is the same morning the app shows.
+    @StateObject private var audioManager = MorningStarter.audio
+    @StateObject private var stageCoordinator = MorningStarter.stages
     @StateObject private var storeKit = StoreKitManager()
 
     // MARK: - Alarm state
@@ -17,7 +19,9 @@ struct UpTimePrizesApp: App {
 
     // MARK: - Model container
 
-    let container: ModelContainer = {
+    var container: ModelContainer { Self.sharedContainer }
+
+    static let sharedContainer: ModelContainer = {
         let schema = Schema([
             JourneyEntity.self,
             SongEntity.self,

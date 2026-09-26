@@ -156,14 +156,16 @@ struct ContentView: View {
                                 break
                             }
                         }
-                        if let song = engine.currentSong(from: audioManager) {
+                        if audioManager.isPlaying && stageCoordinator.currentSong != nil {
+                            // Already playing — started from the lock screen.
+                        } else if let song = engine.currentSong(from: audioManager) {
                             let sub = engine.subdirectory(for: song.journeyId)
                             // A snooze return resumes one stage further (§2.1).
                             stageCoordinator.startAlarm(
                                 song: song,
                                 subdirectory: sub,
                                 audioManager: audioManager,
-                                startingAt: stage(forName: engine.consumeResumeStage())
+                                startingAt: StageCoordinator.stage(forRuleName: engine.consumeResumeStage())
                             )
                         }
                     }
@@ -259,7 +261,9 @@ struct ContentView: View {
 
     /// Starts the in-app morning if an AlarmKit Dismiss asked for it.
     private func startPendingMorningIfAny() {
-        guard PendingMorningStart.consume() else { return }
+        let pending = PendingMorningStart.consume()
+        let playing = audioManager.isPlaying && stageCoordinator.currentSong != nil
+        guard pending || playing, !showAlarm else { return }
         NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
     }
 
@@ -270,14 +274,6 @@ struct ContentView: View {
         case .stage1: return "invite"
         case .stage2: return "nudge"
         case .stage3, .replay: return "prize"
-        }
-    }
-
-    private func stage(forName name: String) -> StageCoordinator.Stage {
-        switch name {
-        case "nudge": return .stage2
-        case "prize": return .stage3
-        default: return .stage1
         }
     }
 

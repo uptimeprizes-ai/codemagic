@@ -7,9 +7,10 @@ import AlarmKit
 // MARK: - OpenMorningIntent
 //
 // Runs when the person taps Dismiss on the AlarmKit lock-screen alarm. It
-// stops the ring and opens the app into the morning — the Option 2 shape:
-// the morning begins on the lock screen and completes in the app, where the
-// song plays, the morning counts, and the Prize screen appears.
+// stops the ring and starts the morning's song at once — on the lock
+// screen, without unlocking (build 33 experiment, founder "option one").
+// The app shows the running stage when opened; the morning counts, and the
+// Prize screen appears, from there.
 //
 // The start request is persisted as well as posted: when the tap cold-
 // launches the app, the post can land before the UI is listening, so the
@@ -17,9 +18,9 @@ import AlarmKit
 // honoured only while fresh, so a stale tap can never start a later morning.
 
 @available(iOS 26.0, *)
-struct OpenMorningIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Open the morning"
-    static var openAppWhenRun: Bool = true
+struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
+    static var title: LocalizedStringResource = "Start the morning"
+    static var openAppWhenRun: Bool = false
     static var isDiscoverable: Bool = false
 
     init() {}
@@ -32,7 +33,8 @@ struct OpenMorningIntent: LiveActivityIntent {
         AlarmRingLog.recordAnswered()
         PendingMorningStart.record()
         await MainActor.run {
-            UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed — opening the morning")
+            UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed — starting the morning on the lock screen")
+            MorningStarter.startFromLockScreen()
             NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
         }
         return .result()

@@ -77,6 +77,15 @@ class StageCoordinator: ObservableObject {
         }
     }
 
+    /// The stage for a rule-vocabulary name; anything unknown is the Invite.
+    static func stage(forRuleName name: String) -> Stage {
+        switch name {
+        case "nudge": return .stage2
+        case "prize": return .stage3
+        default: return .stage1
+        }
+    }
+
     // MARK: - Start alarm
 
     /// Begin the alarm experience for a given song. A snooze return starts
