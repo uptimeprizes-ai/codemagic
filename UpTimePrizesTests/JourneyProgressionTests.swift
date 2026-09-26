@@ -885,6 +885,22 @@ final class UnattendedMorningTests: XCTestCase {
         XCTAssertEqual(verdict(now: date(25, 12, 0), occurrence: t, armedSince: date(25, 11, 0)), .none)
     }
 
+    func testADismissMoreThanThirtyMinutesAfterTheRingIsNotAnAnswer() {
+        let t = date(26, 7, 0)
+        XCTAssertFalse(UnattendedMorning.isLateAnswer(now: date(26, 7, 10), occurrence: t, lastSnoozeReturnAt: nil))
+        XCTAssertFalse(UnattendedMorning.isLateAnswer(now: date(26, 7, 30), occurrence: t, lastSnoozeReturnAt: nil))
+        XCTAssertTrue(UnattendedMorning.isLateAnswer(now: date(26, 7, 31), occurrence: t, lastSnoozeReturnAt: nil))
+        XCTAssertTrue(UnattendedMorning.isLateAnswer(now: date(26, 7, 49), occurrence: t, lastSnoozeReturnAt: nil))
+    }
+
+    func testTheWindowRunsFromTheLatestSnoozeReturn() {
+        let t = date(26, 7, 0)
+        // Snoozed at the Invite; the return rang at 7:20 — 7:45 is on time.
+        XCTAssertFalse(UnattendedMorning.isLateAnswer(now: date(26, 7, 45), occurrence: t, lastSnoozeReturnAt: date(26, 7, 20)))
+        // A snooze return from an earlier morning does not extend today's window.
+        XCTAssertTrue(UnattendedMorning.isLateAnswer(now: date(26, 7, 45), occurrence: t, lastSnoozeReturnAt: date(25, 20, 32)))
+    }
+
     func testRecordedOrAlreadyReportedMorningsAreSkipped() {
         let t = date(25, 7, 0)
         XCTAssertEqual(verdict(now: date(25, 9, 0), occurrence: t, recorded: true), .none)

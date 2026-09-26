@@ -53,6 +53,23 @@ enum UnattendedMorning {
         return nil
     }
 
+    /// Founder ruling 2026-09-26: a Dismiss more than 30 minutes after the
+    /// ring began is not an answer. iOS leaves the alarm on screen after the
+    /// sound stops (about 15 minutes), so without this rule a tap an hour
+    /// later would start — and count — a morning nobody answered.
+    static let answerWindow: TimeInterval = 30 * 60
+
+    /// Whether a Dismiss at `now` comes too late to answer the ring. The ring
+    /// is the scheduled occurrence, or a snooze return that followed it.
+    static func isLateAnswer(now: Date, occurrence: Date?, lastSnoozeReturnAt: Date?) -> Bool {
+        guard let occurrence else { return false }
+        var latestRing = occurrence
+        if let snooze = lastSnoozeReturnAt, snooze >= occurrence, snooze <= now {
+            latestRing = snooze
+        }
+        return now.timeIntervalSince(latestRing) > answerWindow
+    }
+
     static func evaluate(
         now: Date,
         occurrence: Date?,
@@ -99,6 +116,9 @@ enum AlarmRingLog {
     private static let armedSinceKey = "com.uptimeprizes.ring.armedSince"
     private static let armedConfigKey = "com.uptimeprizes.ring.armedConfig"
     private static let evaluatedKey = "com.uptimeprizes.ring.lastEvaluatedOccurrence"
+    private static let armedHourKey = "com.uptimeprizes.ring.armedHour"
+    private static let armedMinuteKey = "com.uptimeprizes.ring.armedMinute"
+    private static let armedDaysKey = "com.uptimeprizes.ring.armedDays"
 
     static func recordAnswered(_ date: Date = Date()) { writeDate(date, answeredKey) }
     static var lastAnsweredAt: Date? { readDate(answeredKey) }
@@ -110,6 +130,9 @@ enum AlarmRingLog {
     /// the alarm's time or days actually change — routine re-arming on launch
     /// must not hide a morning that already rang.
     static func recordArmed(hour: Int, minute: Int, repeatDays: [Int], now: Date = Date()) {
+        UserDefaults.standard.set(hour, forKey: armedHourKey)
+        UserDefaults.standard.set(minute, forKey: armedMinuteKey)
+        UserDefaults.standard.set(repeatDays, forKey: armedDaysKey)
         let config = "\(hour):\(minute):\(repeatDays.sorted())"
         if UserDefaults.standard.string(forKey: armedConfigKey) != config || readDate(armedSinceKey) == nil {
             UserDefaults.standard.set(config, forKey: armedConfigKey)
@@ -117,6 +140,18 @@ enum AlarmRingLog {
         }
     }
     static var armedSince: Date? { readDate(armedSinceKey) }
+
+    /// The most recent time the armed alarm was due, for code that cannot
+    /// reach the database (the lock-screen Dismiss).
+    static func mostRecentOccurrence(before now: Date = Date()) -> Date? {
+        guard UserDefaults.standard.object(forKey: armedHourKey) != nil else { return nil }
+        return UnattendedMorning.mostRecentOccurrence(
+            before: now,
+            hour: UserDefaults.standard.integer(forKey: armedHourKey),
+            minute: UserDefaults.standard.integer(forKey: armedMinuteKey),
+            repeatDays: UserDefaults.standard.array(forKey: armedDaysKey) as? [Int] ?? []
+        )
+    }
 
     static func markEvaluated(_ occurrence: Date) { writeDate(occurrence, evaluatedKey) }
     static func wasEvaluated(_ occurrence: Date) -> Bool { readDate(evaluatedKey) == occurrence }
