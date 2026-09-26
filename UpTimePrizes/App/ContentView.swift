@@ -116,6 +116,9 @@ struct ContentView: View {
                                 stageCoordinator.stopAlarm()
                                 if let outcome {
                                     prizeOutcome = outcome
+                                } else if let answered = MorningStarter.consumeAnsweredOutcome() {
+                                    // Counted when answered on the lock screen.
+                                    prizeOutcome = answered.reachingPrize(stage == .stage3 || stage == .replay)
                                 } else {
                                     // Nothing sounded or the day already has
                                     // its morning — no count, no Prize screen.

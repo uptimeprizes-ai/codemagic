@@ -911,6 +911,17 @@ final class UnattendedMorningTests: XCTestCase {
 @MainActor
 final class UnansweredNeverCountsTests: XCTestCase {
 
+    func testALockScreenMorningReachingThePrizeInTheAppSaysSo() {
+        let answered = AlarmEngine.MorningOutcome(
+            journeyTitle: "The Genesis", morningNumber: 5, totalDays: 9, journeyComplete: false,
+            reachedPrize: false, heldStreakOnly: false, wasUnanswered: false
+        )
+        XCTAssertFalse(answered.reachingPrize(false).reachedPrize)
+        XCTAssertTrue(answered.reachingPrize(true).reachedPrize)
+        XCTAssertEqual(answered.reachingPrize(true).morningNumber, 5)
+    }
+
+
     /// The in-app Option B stop ends the session without recording anything:
     /// no journey progress, no streak (founder ruling 2026-09-25).
     func testEndingAnUnansweredSessionRecordsNoMorning() throws {

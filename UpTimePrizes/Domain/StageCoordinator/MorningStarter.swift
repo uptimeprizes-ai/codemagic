@@ -16,6 +16,17 @@ enum MorningStarter {
     static let audio = AudioPlayerManager()
     static let stages = StageCoordinator()
 
+    /// The morning counted by a lock-screen answer, kept for the Prize
+    /// screen if the person later opens the app and dismisses.
+    private static var answeredOutcome: (day: String, outcome: AlarmEngine.MorningOutcome)?
+
+    /// Today's lock-screen-counted morning, once; nil if there is none.
+    static func consumeAnsweredOutcome(now: Date = Date()) -> AlarmEngine.MorningOutcome? {
+        defer { answeredOutcome = nil }
+        guard let saved = answeredOutcome, saved.day == MorningLedger.dayKey(for: now) else { return nil }
+        return saved.outcome
+    }
+
     /// Starts today's song at the stage a snooze sent forward (the Invite
     /// otherwise). Does nothing if a morning is already playing; a morning
     /// that finished unseen is cleared first, so it can never block the next.
@@ -35,7 +46,7 @@ enum MorningStarter {
                 engine.autoSnooze(stageAtSnooze: stage)
                 stages.stopAlarm()
             case .stopAndReport:
-                engine.endUnansweredSession()
+                // The morning already counted when it was answered.
                 stages.stopAlarm()
             case .keepRinging:
                 break
@@ -48,5 +59,31 @@ enum MorningStarter {
             startingAt: StageCoordinator.stage(forRuleName: engine.consumeResumeStage())
         )
         UpTimeLog.alarm.notice("[ALARM] lock screen: morning started without opening the app")
+
+        // Founder ruling 2026-09-26: answering the doorbell and hearing the
+        // song counts the morning, whether or not the app is ever opened.
+        // (A Dismiss more than 30 minutes late never reaches this point.)
+        if let outcome = engine.handleAlarmDismissed(
+            audioSounded: stages.audioSounded,
+            stageAtDismiss: StageCoordinator.ruleName(for: stages.currentStage),
+            reachedPrize: stages.currentStage == .stage3
+        ) {
+            answeredOutcome = (MorningLedger.dayKey(for: Date()), outcome)
+        }
+    }
+}
+
+extension AlarmEngine.MorningOutcome {
+    /// The same morning, noting that the Prize has now been reached.
+    func reachingPrize(_ reached: Bool) -> AlarmEngine.MorningOutcome {
+        AlarmEngine.MorningOutcome(
+            journeyTitle: journeyTitle,
+            morningNumber: morningNumber,
+            totalDays: totalDays,
+            journeyComplete: journeyComplete,
+            reachedPrize: reachedPrize || reached,
+            heldStreakOnly: heldStreakOnly,
+            wasUnanswered: wasUnanswered
+        )
     }
 }
