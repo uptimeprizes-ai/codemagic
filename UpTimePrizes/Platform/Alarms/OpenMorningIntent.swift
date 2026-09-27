@@ -58,10 +58,17 @@ enum LockScreenAnswer {
         // Dismiss only clears the alarm. Nothing starts, nothing counts; the
         // app reports the morning missed when it opens.
         let now = Date()
+        let occurrence = AlarmRingLog.mostRecentOccurrence(before: now)
+        let snoozeReturn = AlarmRingLog.lastSnoozeReturnAt
+        // Rule 4: the inputs to the late rule, logged every time, so a
+        // morning that goes wrong can be read back afterwards.
+        await MainActor.run {
+            UpTimeLog.alarm.notice("[ALARM] \(how, privacy: .public): answered at \(now.formatted(date: .omitted, time: .standard), privacy: .public), alarm due \(occurrence?.formatted(date: .omitted, time: .standard) ?? "unknown", privacy: .public), last snooze return \(snoozeReturn?.formatted(date: .abbreviated, time: .standard) ?? "none", privacy: .public)")
+        }
         if UnattendedMorning.isLateAnswer(
             now: now,
-            occurrence: AlarmRingLog.mostRecentOccurrence(before: now),
-            lastSnoozeReturnAt: AlarmRingLog.lastSnoozeReturnAt
+            occurrence: occurrence,
+            lastSnoozeReturnAt: snoozeReturn
         ) {
             await MainActor.run {
                 UpTimeLog.alarm.notice("[ALARM] \(how, privacy: .public) more than 30 min after the ring — not an answer, not counted")

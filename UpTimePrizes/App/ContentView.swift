@@ -267,13 +267,20 @@ struct ContentView: View {
         #if canImport(AlarmKit)
         // Opening the app while the doorbell still rings answers it, exactly
         // as its button does.
-        if #available(iOS 26.0, *), !showAlarm, LockScreenAnswer.isRinging {
-            Task { await LockScreenAnswer.answer(how: "app opened while the alarm rang") }
-            return
+        if #available(iOS 26.0, *) {
+            // Verification protocol, rule 4: say what was found on every
+            // return to the app, not only when it acts.
+            let ringing = LockScreenAnswer.isRinging
+            UpTimeLog.alarm.notice("[ALARM] app forward: alarm ringing=\(ringing, privacy: .public) alarm screen shown=\(showAlarm, privacy: .public)")
+            if !showAlarm, ringing {
+                Task { await LockScreenAnswer.answer(how: "app opened while the alarm rang") }
+                return
+            }
         }
         #endif
         let pending = PendingMorningStart.consume()
         let playing = audioManager.isPlaying && stageCoordinator.currentSong != nil
+        UpTimeLog.alarm.notice("[ALARM] app forward: start request=\(pending, privacy: .public) song playing=\(playing, privacy: .public)")
         guard pending || playing, !showAlarm else { return }
         NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
     }
