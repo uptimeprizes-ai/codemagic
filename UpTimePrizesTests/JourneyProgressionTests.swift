@@ -925,6 +925,14 @@ final class UnattendedMorningTests: XCTestCase {
 @MainActor
 final class UnansweredNeverCountsTests: XCTestCase {
 
+    func testAMorningCountedWhenAnsweredKeepsItsSongForTheRestOfTheMorning() {
+        // Counted at the answer: currentDay has already moved from 5 to 6.
+        XCTAssertEqual(AlarmEngine.morningToPlay(currentDay: 6, advancedToday: true), 5)
+        // Tomorrow, nothing counted yet: tomorrow's song.
+        XCTAssertEqual(AlarmEngine.morningToPlay(currentDay: 6, advancedToday: false), 6)
+        XCTAssertEqual(AlarmEngine.morningToPlay(currentDay: 1, advancedToday: true), 1)
+    }
+
     func testALockScreenMorningReachingThePrizeInTheAppSaysSo() {
         let answered = AlarmEngine.MorningOutcome(
             journeyTitle: "The Genesis", morningNumber: 5, totalDays: 9, journeyComplete: false,

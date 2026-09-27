@@ -367,13 +367,31 @@ class AlarmEngine: ObservableObject {
 
     /// Returns the song to play for the currently active journey's morning,
     /// wrapping round the journey's song list.
-    func currentSong(from audioManager: AudioPlayerManager) -> ManifestSong? {
+    func currentSong(from audioManager: AudioPlayerManager, now: Date = Date()) -> ManifestSong? {
         let fetchJourneys = FetchDescriptor<JourneyEntity>()
         guard let journeys = try? context.fetch(fetchJourneys),
               let active = journeys.first(where: { $0.isActive }) else {
             return nil
         }
-        return audioManager.song(forJourneyId: active.id, morning: active.currentDay)
+        let journeyId = active.id
+        let dayKey = MorningLedger.dayKey(for: now)
+        var fetch = FetchDescriptor<MorningRecordEntity>(
+            predicate: #Predicate { $0.dayKey == dayKey && $0.journeyId == journeyId && $0.advancedJourney == true }
+        )
+        fetch.fetchLimit = 1
+        let advancedToday = ((try? context.fetchCount(fetch)) ?? 0) > 0
+        return audioManager.song(
+            forJourneyId: active.id,
+            morning: Self.morningToPlay(currentDay: active.currentDay, advancedToday: advancedToday)
+        )
+    }
+
+    /// Today's morning keeps today's song. A morning counted when it was
+    /// answered has already moved the journey on, so a snooze return later
+    /// that morning must not pick up tomorrow's song (founder's phone,
+    /// 2026-09-27: the Nudge came back as the next day's song).
+    nonisolated static func morningToPlay(currentDay: Int, advancedToday: Bool) -> Int {
+        advancedToday ? max(1, currentDay - 1) : currentDay
     }
 
     /// Bundle subdirectory for a journey's audio. Only The Genesis ships
