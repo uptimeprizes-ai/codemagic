@@ -20,13 +20,27 @@ import AlarmKit
 @available(iOS 26.0, *)
 struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
     static var title: LocalizedStringResource = "Start the morning"
-    static var openAppWhenRun: Bool = false
     static var isDiscoverable: Bool = false
+    // Build 38 (founder, 2026-09-27): start the song at once in the
+    // background, then bring the app forward — iOS asks for Touch ID and
+    // the person lands on the alarm screen with the song already playing.
+    // If they never unlock, the song simply keeps playing on the lock screen.
+    static var supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
     init() {}
 
     func perform() async throws -> some IntentResult {
-        await LockScreenAnswer.answer(how: "AlarmKit dismissed")
+        guard await LockScreenAnswer.answer(how: "AlarmKit dismissed") else { return .result() }
+        do {
+            try await continueInForeground(nil, alwaysConfirm: false)
+            await MainActor.run {
+                UpTimeLog.alarm.notice("[ALARM] lock screen: app brought forward after the song started")
+            }
+        } catch {
+            await MainActor.run {
+                UpTimeLog.alarm.notice("[ALARM] lock screen: app not brought forward (\(error, privacy: .public)) — the song plays on")
+            }
+        }
         return .result()
     }
 }
@@ -48,7 +62,10 @@ enum LockScreenAnswer {
         return alarms.contains { ours.contains($0.id) && $0.state == .alerting }
     }
 
-    static func answer(how: String) async {
+    /// Returns true when the morning was answered (the song started); false
+    /// when the answer came too late to count.
+    @discardableResult
+    static func answer(how: String) async -> Bool {
         // Either the morning alarm or a snooze return may be the one
         // ringing; stopping the other is a harmless no-op.
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.alarmUUID)
@@ -73,7 +90,7 @@ enum LockScreenAnswer {
             await MainActor.run {
                 UpTimeLog.alarm.notice("[ALARM] \(how, privacy: .public) more than 30 min after the ring — not an answer, not counted")
             }
-            return
+            return false
         }
 
         AlarmRingLog.recordAnswered()
@@ -83,6 +100,7 @@ enum LockScreenAnswer {
             MorningStarter.startFromLockScreen()
             NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
         }
+        return true
     }
 }
 #endif
