@@ -264,6 +264,14 @@ struct ContentView: View {
 
     /// Starts the in-app morning if an AlarmKit Dismiss asked for it.
     private func startPendingMorningIfAny() {
+        #if canImport(AlarmKit)
+        // Opening the app while the doorbell still rings answers it, exactly
+        // as its button does.
+        if #available(iOS 26.0, *), !showAlarm, LockScreenAnswer.isRinging {
+            Task { await LockScreenAnswer.answer(how: "app opened while the alarm rang") }
+            return
+        }
+        #endif
         let pending = PendingMorningStart.consume()
         let playing = audioManager.isPlaying && stageCoordinator.currentSong != nil
         guard pending || playing, !showAlarm else { return }

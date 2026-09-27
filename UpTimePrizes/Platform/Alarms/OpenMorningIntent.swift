@@ -26,6 +26,29 @@ struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
     init() {}
 
     func perform() async throws -> some IntentResult {
+        await LockScreenAnswer.answer(how: "AlarmKit dismissed")
+        return .result()
+    }
+}
+
+// MARK: - LockScreenAnswer
+//
+// Answering the doorbell, however it happens: its button (the intent above),
+// or opening the app while it is still ringing — the alarm's panel opens the
+// app without running the button's code (founder's phone, 2026-09-27: the
+// morning went unrecorded). Both paths answer the same way.
+
+@available(iOS 26.0, *)
+enum LockScreenAnswer {
+
+    /// Whether our morning alarm or a snooze return is ringing right now.
+    static var isRinging: Bool {
+        let ours: Set<UUID> = [AlarmKitScheduler.alarmUUID, AlarmKitScheduler.snoozeUUID]
+        let alarms = (try? AlarmManager.shared.alarms) ?? []
+        return alarms.contains { ours.contains($0.id) && $0.state == .alerting }
+    }
+
+    static func answer(how: String) async {
         // Either the morning alarm or a snooze return may be the one
         // ringing; stopping the other is a harmless no-op.
         try? AlarmManager.shared.stop(id: AlarmKitScheduler.alarmUUID)
@@ -41,19 +64,18 @@ struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
             lastSnoozeReturnAt: AlarmRingLog.lastSnoozeReturnAt
         ) {
             await MainActor.run {
-                UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed more than 30 min after the ring — not an answer, not counted")
+                UpTimeLog.alarm.notice("[ALARM] \(how, privacy: .public) more than 30 min after the ring — not an answer, not counted")
             }
-            return .result()
+            return
         }
 
         AlarmRingLog.recordAnswered()
         PendingMorningStart.record()
         await MainActor.run {
-            UpTimeLog.alarm.notice("[ALARM] AlarmKit dismissed — starting the morning on the lock screen")
+            UpTimeLog.alarm.notice("[ALARM] \(how, privacy: .public) — starting the morning on the lock screen")
             MorningStarter.startFromLockScreen()
             NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
         }
-        return .result()
     }
 }
 #endif
