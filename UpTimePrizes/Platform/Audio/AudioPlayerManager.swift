@@ -18,6 +18,8 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     // MARK: - Published state
 
     @Published var isPlaying: Bool = false
+    /// Paused from the lock-screen card. The morning is still in progress.
+    @Published private(set) var isPaused: Bool = false
     @Published var currentStageLabel: String = "Stage 1"
 
     // MARK: - Private
@@ -36,6 +38,48 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         manifest = Self.loadManifest()
         // Configure audio session at init — will be re-activated before playback
         activateAlarmAudioSession()
+        NowPlayingCard.registerCommands(
+            play: { [weak self] in self?.resume() },
+            pause: { [weak self] in self?.pause() }
+        )
+    }
+
+    // MARK: - Pause and resume (the lock-screen card)
+
+    /// Quiets the song where it is. The stage's ring limit keeps running,
+    /// so a paused morning ends or snoozes exactly as an unanswered one.
+    func pause() {
+        guard let player, player.isPlaying else { return }
+        player.pause()
+        loopTimer?.invalidate()
+        loopTimer = nil
+        isPlaying = false
+        isPaused = true
+        NowPlayingCard.update(elapsed: elapsedInRegion, playing: false)
+        UpTimeLog.audio.notice("[AUDIO] paused from the lock screen")
+    }
+
+    /// Picks the song up where it was paused.
+    func resume() {
+        guard isPaused, let player, let region = currentRegion else { return }
+        activateAlarmAudioSession()
+        player.play()
+        isPaused = false
+        isPlaying = true
+        let remaining = max(Double(region.endMs) / 1000.0 - player.currentTime, 0.05)
+        loopTimer = Timer.scheduledTimer(withTimeInterval: remaining, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.isLooping { self.loopRegion() } else { self.handleStage3Finished() }
+            }
+        }
+        NowPlayingCard.update(elapsed: elapsedInRegion, playing: true)
+        UpTimeLog.audio.notice("[AUDIO] resumed from the lock screen")
+    }
+
+    private var elapsedInRegion: TimeInterval {
+        guard let player, let region = currentRegion else { return 0 }
+        return max(player.currentTime - Double(region.startMs) / 1000.0, 0)
     }
 
     // MARK: - Audio Session
@@ -165,6 +209,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         player?.stop()
         player = nil
         isPlaying = false
+        isPaused = false
         isLooping = false
         currentRegion = nil
         onStage3Finished = nil

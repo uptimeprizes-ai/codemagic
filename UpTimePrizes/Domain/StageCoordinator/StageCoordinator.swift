@@ -141,6 +141,7 @@ class StageCoordinator: ObservableObject {
                 self?.currentStage = .replay
             }
         }
+        showCard(for: song)
     }
 
     // MARK: - Stop
@@ -149,6 +150,7 @@ class StageCoordinator: ObservableObject {
         ringLimitTimer?.invalidate()
         ringLimitTimer = nil
         audioManager?.stopAll()
+        NowPlayingCard.clear()
         currentStage = .stage1
         currentSong = nil
     }
@@ -167,11 +169,25 @@ class StageCoordinator: ObservableObject {
         }
     }
 
+    // MARK: - Lock-screen card
+
+    /// The lock-screen card for the stage now sounding: the song's title,
+    /// the app's name, the stage. Only the Prize has a length to show.
+    private func showCard(for song: ManifestSong) {
+        guard audioManager?.isPlaying == true else { return }
+        var duration: TimeInterval?
+        if currentStage == .stage3 {
+            duration = Double(song.fullRegion.endMs - song.fullRegion.startMs) / 1000.0
+        }
+        NowPlayingCard.show(title: song.title, stage: stageName, duration: duration, elapsed: 0, playing: true)
+    }
+
     // MARK: - Private playback
 
     private func playCurrentStage() {
         guard let song = currentSong, let audio = audioManager else { return }
         armRingLimit()
+        defer { showCard(for: song) }
 
         switch currentStage {
         case .stage1:

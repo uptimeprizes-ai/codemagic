@@ -159,7 +159,7 @@ struct ContentView: View {
                                 break
                             }
                         }
-                        if audioManager.isPlaying && stageCoordinator.currentSong != nil {
+                        if (audioManager.isPlaying || audioManager.isPaused) && stageCoordinator.currentSong != nil {
                             // Already playing — started from the lock screen.
                         } else if let song = engine.currentSong(from: audioManager) {
                             let sub = engine.subdirectory(for: song.journeyId)
@@ -285,7 +285,8 @@ struct ContentView: View {
         }
         #endif
         let pending = PendingMorningStart.consume()
-        let playing = audioManager.isPlaying && stageCoordinator.currentSong != nil
+        // Playing, or paused from the lock-screen card: the morning is on.
+        let playing = (audioManager.isPlaying || audioManager.isPaused) && stageCoordinator.currentSong != nil
         UpTimeLog.alarm.notice("[ALARM] app forward: start request=\(pending, privacy: .public) song playing=\(playing, privacy: .public)")
         guard pending || playing, !showAlarm else { return }
         NotificationCenter.default.post(name: AlarmEngine.alarmFiredNotificationName, object: nil)
