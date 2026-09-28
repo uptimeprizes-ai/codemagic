@@ -205,6 +205,11 @@ class StoreKitManager: ObservableObject {
         }
 
         try? context.save()
+        if isNewPurchase {
+            Task { await DeliveryManager.shared.download(journeyId: journeyId) }
+        } else {
+            Task { await DeliveryManager.shared.refresh(ownedJourneyIds: [journeyId]) }
+        }
         UpTimeLog.store.notice("[STORE] entitlement applied: \(productID, privacy: .public) → \(journeyId, privacy: .public) state=\(purchased.purchaseState, privacy: .public) newPurchase=\(isNewPurchase, privacy: .public)")
     }
 

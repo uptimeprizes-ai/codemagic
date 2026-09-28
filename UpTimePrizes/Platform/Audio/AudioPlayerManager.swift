@@ -217,11 +217,13 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     // MARK: - Bundle URL helper
 
     private func bundleURL(for filename: String, subdirectory: String?) -> URL? {
-        if let sub = subdirectory {
-            return Bundle.main.url(forResource: filename, withExtension: "m4a", subdirectory: sub)
-                ?? Bundle.main.url(forResource: filename, withExtension: "m4a")
+        if let sub = subdirectory,
+           let url = Bundle.main.url(forResource: filename, withExtension: "m4a", subdirectory: sub) {
+            return url
         }
+        // Inside the app, or downloaded in its journey's pack.
         return Bundle.main.url(forResource: filename, withExtension: "m4a")
+            ?? DeliveryManager.shared.downloadedURL(fileStem: filename)
     }
 
     // MARK: - Convenience play (for Player page preview)

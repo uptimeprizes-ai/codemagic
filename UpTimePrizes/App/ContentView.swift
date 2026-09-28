@@ -232,6 +232,12 @@ struct ContentView: View {
         // Configure StoreKit with the model context: fetch products, restore purchases.
         storeKit.configure(context: context)
 
+        // Which owned journeys' music is already on this phone.
+        let owned = ((try? context.fetch(FetchDescriptor<JourneyEntity>())) ?? [])
+            .filter { $0.purchaseState != "NOT_OWNED" }
+            .map(\.id)
+        Task { await DeliveryManager.shared.refresh(ownedJourneyIds: owned) }
+
         // Bug 1 fix: Reschedule alarm from persisted state on first launch
         engine.rescheduleFromPersistedState()
 

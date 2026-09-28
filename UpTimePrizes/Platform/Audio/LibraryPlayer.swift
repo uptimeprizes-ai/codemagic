@@ -40,7 +40,8 @@ final class LibraryPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         stop()
         current = track
         guard let url = Bundle.main.url(forResource: track.fileStem, withExtension: "m4a", subdirectory: track.subdirectory)
-            ?? Bundle.main.url(forResource: track.fileStem, withExtension: "m4a") else {
+            ?? Bundle.main.url(forResource: track.fileStem, withExtension: "m4a")
+            ?? DeliveryManager.shared.downloadedURL(fileStem: track.fileStem) else {
             notReady = true
             UpTimeLog.audio.notice("[AUDIO] player: \(track.fileStem, privacy: .public) not on this device yet")
             return

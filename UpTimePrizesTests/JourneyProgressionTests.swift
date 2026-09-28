@@ -1084,3 +1084,56 @@ final class ReviewPromptTests: XCTestCase {
     func testNeverWhileAudioPlays() { XCTAssertFalse(ask(audio: true)) }
     func testNeverWithUnacknowledgedMissedAlarm() { XCTAssertFalse(ask(missed: true)) }
 }
+
+// MARK: - Delivery (memo 2026-09-26; Android JourneyDownloadLabel, word for word)
+
+final class DeliveryRulesTests: XCTestCase {
+
+    func testTheCardLineUsesAndroidsWords() {
+        XCTAssertEqual(DeliveryLabel.text(.notDownloaded, owned: true), "Tap to download")
+        XCTAssertEqual(DeliveryLabel.text(.arriving(0.4), owned: true), "Arriving · 40%")
+        XCTAssertEqual(DeliveryLabel.text(.arriving(1.7), owned: true), "Arriving · 100%")
+        XCTAssertEqual(DeliveryLabel.text(.waitingForWiFi, owned: true), "Waiting for Wi-Fi")
+        XCTAssertEqual(DeliveryLabel.text(.didNotArrive, owned: true), "Did not arrive — tap to try again")
+    }
+
+    func testNothingIsSaidWhenTheMusicIsHereOrNotOwned() {
+        XCTAssertNil(DeliveryLabel.text(.ready, owned: true))
+        XCTAssertNil(DeliveryLabel.text(.inApp, owned: true))
+        XCTAssertNil(DeliveryLabel.text(.notDownloaded, owned: false))
+        XCTAssertFalse(DeliveryLabel.isActionable(.notDownloaded, owned: false))
+    }
+
+    func testOnlyAStalledOrMissingDownloadCanBeTapped() {
+        XCTAssertTrue(DeliveryLabel.isActionable(.notDownloaded, owned: true))
+        XCTAssertTrue(DeliveryLabel.isActionable(.didNotArrive, owned: true))
+        XCTAssertTrue(DeliveryLabel.isActionable(.waitingForWiFi, owned: true))
+        XCTAssertFalse(DeliveryLabel.isActionable(.arriving(0.5), owned: true))
+        XCTAssertFalse(DeliveryLabel.isActionable(.ready, owned: true))
+        XCTAssertTrue(DeliveryState.ready.isPlayable)
+        XCTAssertTrue(DeliveryState.inApp.isPlayable)
+        XCTAssertFalse(DeliveryState.notDownloaded.isPlayable)
+    }
+
+    func testTheGenesisStandInRotatesWithTheJourneysDay() {
+        XCTAssertEqual(GenesisFallback.morning(forJourneyDay: 1, genesisSongCount: 5), 1)
+        XCTAssertEqual(GenesisFallback.morning(forJourneyDay: 5, genesisSongCount: 5), 5)
+        XCTAssertEqual(GenesisFallback.morning(forJourneyDay: 6, genesisSongCount: 5), 1)
+        XCTAssertEqual(GenesisFallback.morning(forJourneyDay: 0, genesisSongCount: 5), 1)
+        XCTAssertEqual(GenesisFallback.morning(forJourneyDay: 3, genesisSongCount: 0), 1)
+    }
+
+    /// The Genesis ships inside the app: every song of it is playable with
+    /// nothing downloaded. A paid journey is not, until its pack arrives.
+    @MainActor
+    func testGenesisIsAlwaysHereAndAPaidJourneyWaitsForItsPack() throws {
+        let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
+        for song in manifest.songs(forJourneyId: "genesis") {
+            XCTAssertTrue(DeliveryManager.shared.isPlayable(journeyId: "genesis", fileStem: song.fileStem), song.fileStem)
+        }
+        let first = try XCTUnwrap(manifest.songs(forJourneyId: "cast-prelude").first)
+        XCTAssertFalse(DeliveryManager.shared.isPlayable(journeyId: "cast-prelude", fileStem: first.fileStem))
+        XCTAssertEqual(DeliveryManager.shared.state(for: "genesis"), .inApp)
+        XCTAssertEqual(DeliveryManager.shared.state(for: "overture"), .notDownloaded)
+    }
+}

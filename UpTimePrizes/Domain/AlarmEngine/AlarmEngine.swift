@@ -206,6 +206,10 @@ class AlarmEngine: ObservableObject {
     /// unique dayKey both forbid it.
     private var hasCountedThisSession = false
 
+    /// True when this morning's song had not arrived and a Genesis song is
+    /// standing in: the streak counts, the journey does not move.
+    private(set) var morningIsGenesisFallback = false
+
     /// Call when a new alarm session begins (the alarm UI is presented).
     /// The in-app session owns this morning from here, so it also marks the
     /// latest ring as answered for the unattended-morning check.
@@ -313,7 +317,9 @@ class AlarmEngine: ObservableObject {
         }
 
         let ledger = MorningLedger(context: context)
-        let isCatalyst = active.id == "catalyst"
+        // A Catalyst morning, or a Genesis song standing in for one that had
+        // not arrived: the streak counts, the journey does not move.
+        let isCatalyst = active.id == "catalyst" || morningIsGenesisFallback
 
         let counted = ledger.record(
             date: date,
@@ -383,10 +389,26 @@ class AlarmEngine: ObservableObject {
         )
         fetch.fetchLimit = 1
         let advancedToday = ((try? context.fetchCount(fetch)) ?? 0) > 0
-        return audioManager.song(
+        let song = audioManager.song(
             forJourneyId: active.id,
             morning: Self.morningToPlay(currentDay: active.currentDay, advancedToday: advancedToday)
         )
+        morningIsGenesisFallback = false
+        guard let song else { return nil }
+        if DeliveryManager.shared.isPlayable(journeyId: song.journeyId, fileStem: song.fileStem) {
+            return song
+        }
+        // The song has not arrived: never silence. A Genesis song stands in.
+        let genesisCount = audioManager.songs(forJourneyId: "genesis").count
+        let fallback = audioManager.song(
+            forJourneyId: "genesis",
+            morning: GenesisFallback.morning(forJourneyDay: active.currentDay, genesisSongCount: genesisCount)
+        )
+        if let fallback {
+            morningIsGenesisFallback = true
+            UpTimeLog.alarm.notice("[ALARM] \(song.fileStem, privacy: .public) is not on this phone — playing \(fallback.fileStem, privacy: .public) from The Genesis; the journey will not move")
+        }
+        return fallback ?? song
     }
 
     /// Today's morning keeps today's song. A morning counted when it was

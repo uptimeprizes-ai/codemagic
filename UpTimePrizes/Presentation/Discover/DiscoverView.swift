@@ -16,6 +16,7 @@ struct DiscoverView: View {
     // MARK: - Observed
 
     @ObservedObject var storeKit: StoreKitManager
+    @ObservedObject private var delivery = DeliveryManager.shared
 
     // MARK: - State
 
@@ -200,6 +201,21 @@ struct DiscoverView: View {
                             .foregroundColor(BrassPaper.brass2.opacity(0.7))
                     }
                 }
+            }
+            if let line = DeliveryLabel.text(delivery.state(for: journey.id), owned: owned) {
+                Spacer().frame(height: 10)
+                let actionable = DeliveryLabel.isActionable(delivery.state(for: journey.id), owned: owned)
+                Text(line)
+                    .font(.mono(11))
+                    .tracking(1.65)
+                    .foregroundColor(BrassPaper.brass3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard actionable else { return }
+                        Task { await delivery.download(journeyId: journey.id) }
+                    }
+                    .accessibilityAddTraits(actionable ? .isButton : [])
             }
             if canExpand && expanded {
                 Spacer().frame(height: 10)
