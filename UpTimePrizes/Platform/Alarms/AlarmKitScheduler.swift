@@ -36,6 +36,22 @@ enum AlarmKitScheduler {
         return alarms.contains { $0.id == alarmUUID }
     }
 
+    /// Verification protocol, rule 4: what AlarmKit actually holds, logged
+    /// on every launch and return — so an alarm that disappears (28 Sept:
+    /// gone after an overnight restart) is seen, not guessed.
+    static func logHeldAlarms(context: String) {
+        do {
+            let alarms = try AlarmManager.shared.alarms
+            let described = alarms.map { alarm -> String in
+                let name = alarm.id == alarmUUID ? "morning" : (alarm.id == snoozeUUID ? "snooze-return" : alarm.id.uuidString)
+                return "\(name)=\(alarm.state)"
+            }
+            UpTimeLog.alarm.notice("[ALARM] \(context, privacy: .public): AlarmKit holds \(alarms.count, privacy: .public) alarm(s) \(described.joined(separator: ", "), privacy: .public)")
+        } catch {
+            UpTimeLog.alarm.error("[ALARM] \(context, privacy: .public): AlarmKit alarms unreadable: \(error, privacy: .public)")
+        }
+    }
+
     /// Ask once; the system remembers. Returns whether alarms may ring.
     static func requestAuthorization() async -> Bool {
         let before = AlarmManager.shared.authorizationState

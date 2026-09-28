@@ -172,8 +172,11 @@ class AlarmEngine: ObservableObject {
         // When AlarmKit owns the morning there are deliberately no pending
         // notifications; the alarm is healthy if AlarmKit holds it.
         #if canImport(AlarmKit)
-        if #available(iOS 26.0, *), AlarmKitScheduler.isAuthorized, AlarmKitScheduler.isScheduled {
-            return
+        if #available(iOS 26.0, *) {
+            AlarmKitScheduler.logHeldAlarms(context: "verify")
+            if AlarmKitScheduler.isAuthorized, AlarmKitScheduler.isScheduled {
+                return
+            }
         }
         #endif
 
