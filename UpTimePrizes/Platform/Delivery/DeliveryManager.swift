@@ -68,12 +68,15 @@ final class DeliveryManager: ObservableObject {
     private func resolveIfPresent(journeyId: String) async -> Bool {
         #if canImport(BackgroundAssets)
         if #available(iOS 26.0, *) {
+            // Checked file by file rather than with assetPackIsAvailableLocally,
+            // which needs iOS 26.4 (build 138 failed on it): every song must
+            // resolve to a file that is really on the phone.
             let manager = AssetPackManager.shared
-            guard await manager.assetPackIsAvailableLocally(withID: journeyId) else { return false }
             var found = 0
             let wanted = stems(for: journeyId)
             for stem in wanted {
-                if let url = try? await manager.url(for: FilePath("\(journeyId)/\(stem).m4a")) {
+                if let url = try? await manager.url(for: FilePath("\(journeyId)/\(stem).m4a")),
+                   FileManager.default.fileExists(atPath: url.path) {
                     resolved[stem] = url
                     found += 1
                 }
