@@ -21,26 +21,16 @@ import AlarmKit
 struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
     static var title: LocalizedStringResource = "Start the morning"
     static var isDiscoverable: Bool = false
-    // Build 38 (founder, 2026-09-27): start the song at once in the
-    // background, then bring the app forward — iOS asks for Touch ID and
-    // the person lands on the alarm screen with the song already playing.
-    // If they never unlock, the song simply keeps playing on the lock screen.
-    static var supportedModes: IntentModes = [.background, .foreground(.dynamic)]
+    // The song starts at once in the background; the app stays where it is.
+    // Build 137 tried continueInForeground afterwards: iOS refuses it from a
+    // locked phone (RequestDenied, 28 Sept 09:13 and 10:33). The lock-screen
+    // Now Playing card is the route to the app instead.
+    static var supportedModes: IntentModes = .background
 
     init() {}
 
     func perform() async throws -> some IntentResult {
-        guard await LockScreenAnswer.answer(how: "AlarmKit dismissed") else { return .result() }
-        do {
-            try await continueInForeground(nil, alwaysConfirm: false)
-            await MainActor.run {
-                UpTimeLog.alarm.notice("[ALARM] lock screen: app brought forward after the song started")
-            }
-        } catch {
-            await MainActor.run {
-                UpTimeLog.alarm.notice("[ALARM] lock screen: app not brought forward (\(error, privacy: .public)) — the song plays on")
-            }
-        }
+        await LockScreenAnswer.answer(how: "AlarmKit dismissed")
         return .result()
     }
 }
