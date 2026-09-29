@@ -69,6 +69,14 @@ struct ContentView: View {
     @State private var missedSounded: Bool = true
     /// Android WelcomePage: shown once, before the main interface.
     @AppStorage("com.uptimeprizes.welcomeSeen") private var welcomeSeen: Bool = false
+    /// Android DayNineTransitionDialog: shown once, when the catalog opens.
+    @AppStorage("com.uptimeprizes.dayNineSeen") private var dayNineSeen: Bool = false
+    @Query private var demoStates: [DemoStateEntity]
+
+    private var catalogOpen: Bool {
+        guard let demo = demoStates.first else { return false }
+        return demo.isPurchaseOffered || CatalogRules.isCatalogOpen(genesisCompletedDays: demo.completedDays)
+    }
     @StateObject private var notificationDelegate = NotificationDelegate()
     @Environment(\.requestReview) private var requestReview
 
@@ -195,6 +203,11 @@ struct ContentView: View {
         .overlay {
             if !welcomeSeen {
                 WelcomeView { welcomeSeen = true }
+            } else if catalogOpen && !dayNineSeen {
+                DayNineView {
+                    dayNineSeen = true
+                    UpTimeLog.seed.notice("[SEED] day-nine screen seen — the catalog is open")
+                }
             }
         }
         .task {
