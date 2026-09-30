@@ -1,5 +1,6 @@
 import Foundation
 import AppIntents
+import UIKit
 
 #if canImport(AlarmKit)
 import AlarmKit
@@ -31,6 +32,16 @@ struct OpenMorningIntent: LiveActivityIntent, AudioPlaybackIntent {
 
     func perform() async throws -> some IntentResult {
         guard await LockScreenAnswer.answer(how: "AlarmKit dismissed") else { return .result() }
+        // Only ask when the phone is unlocked. On a locked phone iOS answers
+        // the request by putting up the unlock screen over the Now Playing
+        // card — and then does not open the app anyway (30 Sept 07:26).
+        let unlocked = await MainActor.run { UIApplication.shared.isProtectedDataAvailable }
+        guard unlocked else {
+            await MainActor.run {
+                UpTimeLog.alarm.notice("[ALARM] lock screen: phone locked — the song plays, the card leads to the app")
+            }
+            return .result()
+        }
         do {
             try await continueInForeground(nil, alwaysConfirm: false)
             await MainActor.run {
