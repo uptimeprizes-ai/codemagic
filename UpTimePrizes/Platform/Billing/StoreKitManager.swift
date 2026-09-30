@@ -180,12 +180,23 @@ class StoreKitManager: ObservableObject {
             UpTimeLog.store.error("[STORE] owned product matches no journey: \(productID, privacy: .public)")
             return
         }
-        guard let context else { return }
+        guard let context else {
+            // Transaction.updates can deliver before configure(context:) runs.
+            // The restore that configure performs picks this purchase up again.
+            UpTimeLog.store.notice("[STORE] entitlement for \(productID, privacy: .public) arrived before the database was ready — the launch restore will apply it")
+            return
+        }
 
         purchasedProductIDs.insert(productID)
 
-        guard let journeys = try? context.fetch(FetchDescriptor<JourneyEntity>()),
-              let purchased = journeys.first(where: { $0.id == journeyId }) else { return }
+        guard let journeys = try? context.fetch(FetchDescriptor<JourneyEntity>()) else {
+            UpTimeLog.store.error("[STORE] entitlement for \(productID, privacy: .public) not applied: journeys could not be read")
+            return
+        }
+        guard let purchased = journeys.first(where: { $0.id == journeyId }) else {
+            UpTimeLog.store.error("[STORE] entitlement for \(productID, privacy: .public) not applied: no journey row for \(journeyId, privacy: .public)")
+            return
+        }
 
         if purchased.purchaseState == "NOT_OWNED" {
             if purchased.id == "catalyst" {
