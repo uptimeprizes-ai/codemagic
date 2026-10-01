@@ -76,3 +76,56 @@ workflows:
         beta_groups:
           - "Public Link"
         submit_to_app_store: false
+
+  # Builds the download packs for the paid journeys (delivery memo, 26 Sept).
+  # Started by hand; never part of an app build. Reads the PRIVATE music
+  # repository with a read-only deploy key held encrypted in the
+  # ios_audio_repo group. Uploading the packs to Apple comes later, after
+  # the account migration and the downloader extension.
+  ios-asset-packs:
+    name: iOS Asset Packs (paid music)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_audio_repo
+      xcode: latest
+    scripts:
+      - name: Fetch the paid music (private repository, read-only key)
+        script: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          # Strip Windows line endings a pasted key may carry.
+          printf '%s\n' "$AUDIO_REPO_SSH_KEY" | tr -d '\r' > ~/.ssh/uptime_audio
+          chmod 600 ~/.ssh/uptime_audio
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/uptime_audio -o IdentitiesOnly=yes"
+          git clone --depth 1 git@github.com:uptimeprizes-ai/uptime-ios-audio.git "$CM_BUILD_DIR/audio"
+          echo "[PACKS] fetched $(find "$CM_BUILD_DIR/audio" -name '*.m4a' | wc -l | tr -d ' ') song files"
+      - name: Verify every file against its fingerprint
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/audio"
+          shasum -a 256 -c SHA256SUMS --quiet
+          echo "[PACKS] all $(wc -l < SHA256SUMS | tr -d ' ') fingerprints match"
+      - name: Show the packaging tool and its manifest template
+        script: |
+          set -euo pipefail
+          xcodebuild -version
+          xcrun --find ba-package
+          xcrun ba-package template -o /tmp/ba_template.json
+          cat /tmp/ba_template.json
+      - name: Build one asset pack per journey
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/audio"
+          mkdir -p "$CM_BUILD_DIR/packs"
+          for j in cast-prelude warm-front daybreak-shuffle catalyst educator overture; do
+            python3 "$CM_BUILD_DIR/scripts/make_pack_manifest.py" "$j" > "manifest_$j.json"
+            cat "manifest_$j.json" | head -12
+            xcrun ba-package "manifest_$j.json" -o "$CM_BUILD_DIR/packs/$j.aar"
+            echo "[PACKS] $j: $(ls "$j"/*.m4a | wc -l | tr -d ' ') songs -> $(du -h "$CM_BUILD_DIR/packs/$j.aar" | cut -f1)"
+          done
+          ls -la "$CM_BUILD_DIR/packs"
+    artifacts:
+      - packs/*.aar
