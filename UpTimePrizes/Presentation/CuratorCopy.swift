@@ -54,8 +54,9 @@ enum CuratorCopy {
     static let journeyCompletePill = "COMPLETE" // alone; no journey name
 
     // MARK: Discover
-
-    static let discoverPriceLine = "JOURNEYS FROM $1.99"
+    //
+    // No price is ever stored in the app: every figure comes from the App
+    // Store (Product.displayPrice). Pricing canon, 1 Oct 2026.
 
     // MARK: Settings
 
