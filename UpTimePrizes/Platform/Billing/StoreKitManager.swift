@@ -209,6 +209,10 @@ class StoreKitManager: ObservableObject {
             }
         }
 
+        // Progress saved on another phone comes back only now, after the
+        // App Store has confirmed ownership — never from the record alone.
+        ProgressBackup.applyConfirmedOwnership(of: purchased, among: journeys, snapshot: ProgressBackup.load())
+
         if isNewPurchase && purchased.id != "catalyst" {
             for journey in journeys {
                 journey.isActive = journey.id == journeyId
@@ -216,6 +220,7 @@ class StoreKitManager: ObservableObject {
         }
 
         try? context.save()
+        ProgressBackup.save(context: context, reason: "ownership confirmed")
         if isNewPurchase {
             Task { await DeliveryManager.shared.download(journeyId: journeyId) }
         } else {

@@ -185,6 +185,9 @@ struct ContentView: View {
                 // This catches cases where the OS cleared pending notifications (e.g., after
                 // an app update from TestFlight/App Store).
                 .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .background {
+                        ProgressBackup.save(context: context, reason: "background")
+                    }
                     if newPhase == .active {
                         startPendingMorningIfAny()
                         judgeUnattendedMorning()
@@ -236,6 +239,8 @@ struct ContentView: View {
 
         // Seed database (with manifest fingerprint check for Bug 3)
         DatabaseSeeder.seed(context: context)
+        // A restored or new phone: bring progress back before anything reads it.
+        ProgressBackup.restoreIfFresh(context: context)
         isSeeded = true
 
         // Create AlarmEngine
@@ -267,6 +272,7 @@ struct ContentView: View {
         // left a start request; the UI is ready now, so honour it.
         startPendingMorningIfAny()
         judgeUnattendedMorning()
+        ProgressBackup.save(context: context, reason: "launch")
     }
 
     /// Reports the most recent AlarmKit morning nobody answered, once.

@@ -1137,3 +1137,94 @@ final class DeliveryRulesTests: XCTestCase {
         XCTAssertEqual(DeliveryManager.shared.state(for: "overture"), .notDownloaded)
     }
 }
+
+// MARK: - Progress survives a new phone (founder ruling 2026-09-28)
+
+@MainActor
+final class ProgressBackupTests: XCTestCase {
+
+    private func container() throws -> ModelContext {
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self,
+                             MorningRecordEntity.self, StarredSongEntity.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        return ModelContext(try ModelContainer(for: schema, configurations: [config]))
+    }
+
+    private func journey(_ id: String, total: Int = 9, state: String, active: Bool = false,
+                         done: Int = 0, day: Int = 1) -> JourneyEntity {
+        JourneyEntity(id: id, title: id, descriptionText: "", framingLine: "", totalDays: total, sortOrder: 0,
+                      packName: "", productId: "", entitlementId: "", isPurchaseOffered: false, isActive: active,
+                      purchaseState: state, completedDays: done, currentDay: day)
+    }
+
+    private func savedRecord() -> ProgressSnapshot {
+        ProgressSnapshot(
+            savedAt: Date(timeIntervalSince1970: 1_790_000_000),
+            journeys: [
+                .init(id: "cast-prelude", completedDays: 3, currentDay: 4),
+                .init(id: "genesis", completedDays: 9, currentDay: 10)
+            ],
+            activeJourneyId: "cast-prelude",
+            demo: .init(currentDay: 10, completedDays: 9, isPurchaseOffered: true),
+            mornings: [.init(dayKey: "2026-09-30", journeyId: "genesis", stageAtDismiss: "invite",
+                             reachedPrize: false, heldStreakOnly: false, advancedJourney: true,
+                             recordedAt: Date(timeIntervalSince1970: 1_790_000_000))],
+            alarm: .init(hour: 7, minute: 26, isEnabled: true, repeatDays: [], snoozeMinutes: 5),
+            starredSongIds: ["demo-01"],
+            welcomeSeen: true,
+            dayNineSeen: true
+        )
+    }
+
+    func testTheRecordReadsBackExactlyAsWritten() throws {
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let record = savedRecord()
+        XCTAssertEqual(try decoder.decode(ProgressSnapshot.self, from: encoder.encode(record)), record)
+    }
+
+    func testARestoreBringsBackTheGenesisButNeverGrantsAPaidJourney() throws {
+        let context = try container()
+        let genesis = journey("genesis", state: "ACTIVE_IN_PROGRESS", active: true)
+        let cast = journey("cast-prelude", state: "NOT_OWNED")
+        context.insert(genesis); context.insert(cast)
+        context.insert(DemoStateEntity()); context.insert(AlarmEntity())
+        try context.save()
+        XCTAssertTrue(ProgressBackup.isFreshStore(context: context))
+
+        ProgressBackup.apply(savedRecord(), to: context)
+
+        XCTAssertEqual(genesis.completedDays, 9)
+        XCTAssertEqual(genesis.purchaseState, "UNLOCKED_FOR_PLAYBACK")
+        XCTAssertEqual(cast.purchaseState, "NOT_OWNED", "the record must never grant ownership")
+        XCTAssertEqual(cast.completedDays, 0, "paid progress waits for the App Store")
+        XCTAssertEqual(try context.fetch(FetchDescriptor<DemoStateEntity>()).first?.completedDays, 9)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<MorningRecordEntity>()), 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<AlarmEntity>()).first?.minute, 26)
+        XCTAssertFalse(ProgressBackup.isFreshStore(context: context))
+    }
+
+    func testOnceTheAppStoreConfirmsOwnershipTheMorningsComeBack() throws {
+        let genesis = journey("genesis", state: "UNLOCKED_FOR_PLAYBACK", active: true, done: 9, day: 10)
+        let cast = journey("cast-prelude", state: "ACTIVE_IN_PROGRESS")
+        XCTAssertTrue(ProgressBackup.applyConfirmedOwnership(of: cast, among: [genesis, cast], snapshot: savedRecord()))
+        XCTAssertEqual(cast.completedDays, 3)
+        XCTAssertEqual(cast.currentDay, 4)
+        XCTAssertTrue(cast.isActive)
+        XCTAssertFalse(genesis.isActive)
+        // Never twice, never over progress made on this phone.
+        XCTAssertFalse(ProgressBackup.applyConfirmedOwnership(of: cast, among: [genesis, cast], snapshot: savedRecord()))
+    }
+
+    func testProgressOnAJourneyNotYetOwnedHereIsCarriedForward() throws {
+        let context = try container()
+        context.insert(journey("genesis", state: "ACTIVE_IN_PROGRESS", active: true, done: 2, day: 3))
+        context.insert(journey("cast-prelude", state: "NOT_OWNED"))
+        context.insert(DemoStateEntity())
+        try context.save()
+        let next = ProgressBackup.snapshot(context: context, previous: savedRecord())
+        XCTAssertEqual(next.journeys.first(where: { $0.id == "cast-prelude" })?.completedDays, 3)
+        XCTAssertEqual(next.journeys.first(where: { $0.id == "genesis" })?.completedDays, 2)
+        XCTAssertEqual(next.activeJourneyId, "genesis")
+    }
+}

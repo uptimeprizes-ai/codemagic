@@ -360,6 +360,7 @@ class AlarmEngine: ObservableObject {
         }
 
         try? context.save()
+        ProgressBackup.save(context: context, reason: "morning counted")
 
         return MorningOutcome(
             journeyTitle: active.title,
