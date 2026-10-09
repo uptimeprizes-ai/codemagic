@@ -14,6 +14,11 @@ import Foundation
 //   The Prize   | Untouched — plays out and waits, until a 30-min backstop.
 //
 // One auto-snooze per alarm, persisted — the process can die between rings.
+//
+// The lock-screen card's pause (founder, 2026-10-09): in the Invite and the
+// Nudge, pause IS the snooze — the return is set at once, as a system alarm,
+// so it sounds even if iOS puts the paused app to sleep. Play before the
+// return takes the snooze back. In the Prize, pause is only a pause.
 // Stages never advance on their own; a stage moves when someone snoozes,
 // or when the app snoozes for them.
 
@@ -44,6 +49,11 @@ enum RingDecision {
             // backstop ends it, and the caller treats that as auto-silence.
             return .keepRinging
         }
+    }
+
+    /// Whether pausing from the lock-screen card snoozes in this stage.
+    static func cardPauseSnoozes(stage: String) -> Bool {
+        stage == "invite" || stage == "nudge"
     }
 
     /// The ring limit for a stage — seven minutes for the ringing stages,

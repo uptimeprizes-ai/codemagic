@@ -155,6 +155,19 @@ class StageCoordinator: ObservableObject {
         currentSong = nil
     }
 
+    /// Holds the stage's ring limit while a card pause's snooze is pending:
+    /// the snooze return is what comes next, not the seven-minute rule.
+    func holdRingLimit() {
+        ringLimitTimer?.invalidate()
+        ringLimitTimer = nil
+    }
+
+    /// Play took the card pause's snooze back: the stage's limit starts over.
+    func releaseRingLimit() {
+        guard currentSong != nil else { return }
+        armRingLimit()
+    }
+
     /// Re-arms the ring-limit timer for the current stage. Any person action
     /// that changes stage re-arms it; stopping the alarm cancels it.
     private func armRingLimit() {

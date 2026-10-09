@@ -126,6 +126,16 @@ enum AlarmRingLog {
     static func recordSnoozeReturn(at date: Date) { writeDate(date, snoozeReturnKey) }
     static var lastSnoozeReturnAt: Date? { readDate(snoozeReturnKey) }
 
+    /// A snooze taken back before it returned: the log goes back to the
+    /// return it replaced, so a ring that never happens is never judged.
+    static func restoreSnoozeReturn(_ previous: Date?) {
+        if let previous {
+            writeDate(previous, snoozeReturnKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: snoozeReturnKey)
+        }
+    }
+
     /// Called whenever the alarm is (re-)scheduled. armedSince moves only when
     /// the alarm's time or days actually change — routine re-arming on launch
     /// must not hide a morning that already rang.

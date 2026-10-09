@@ -472,6 +472,8 @@ extension AlarmEngine {
     /// notification would be muted); otherwise a notification carries it.
     func snoozeAlarm(stageAtSnooze: String) {
         let minutes = snoozeMinutes
+        let withdrawalsAtSnooze = Self.snoozeWithdrawals
+        Self.returnBeforeLastSnooze = AlarmRingLog.lastSnoozeReturnAt
 
         // Persist the resume stage — consumed once by the next session, valid
         // only through the snooze window plus a grace period, so a stale
@@ -490,6 +492,13 @@ extension AlarmEngine {
             Task { @MainActor in
                 do {
                     try await AlarmKitScheduler.scheduleSnoozeReturn(after: minutes)
+                    // Play may have taken this snooze back while it was
+                    // being set (a quick pause and play on the card).
+                    guard withdrawalsAtSnooze == Self.snoozeWithdrawals else {
+                        AlarmKitScheduler.cancelSnoozeReturn()
+                        UpTimeLog.alarm.notice("[ALARM] snooze return taken back as it was set — cancelled")
+                        return
+                    }
                     AlarmRingLog.recordSnoozeReturn(at: Date().addingTimeInterval(TimeInterval(minutes * 60)))
                 } catch {
                     UpTimeLog.alarm.error("[ALARM] snooze return via AlarmKit failed — using a notification")
@@ -500,6 +509,35 @@ extension AlarmEngine {
         }
         #endif
         scheduleSnoozeNotification(minutes: minutes)
+    }
+
+    /// Counts snoozes taken back, so a return still being set can tell it
+    /// was withdrawn in the meantime.
+    private static var snoozeWithdrawals = 0
+    /// The ring log's snooze return before the latest snooze replaced it.
+    private static var returnBeforeLastSnooze: Date?
+
+    /// Takes back a snooze before it returns (the card's pause, then play;
+    /// or a Dismiss in the app while that snooze is pending): no return
+    /// sounds, the next session starts where it would have, and the ring
+    /// log forgets the return that will never happen.
+    func withdrawSnooze() {
+        Self.snoozeWithdrawals += 1
+        if let alarm = try? context.fetch(FetchDescriptor<AlarmEntity>()).first {
+            alarm.resumeStage = "invite"
+            alarm.resumeStageValidUntil = Date.distantPast
+            try? context.save()
+        }
+        #if canImport(AlarmKit)
+        if #available(iOS 26.0, *) {
+            AlarmKitScheduler.cancelSnoozeReturn()
+        }
+        #endif
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: ["\(Self.alarmNotificationIdentifier).snooze"]
+        )
+        AlarmRingLog.restoreSnoozeReturn(Self.returnBeforeLastSnooze)
+        UpTimeLog.alarm.notice("[ALARM] snooze taken back — no return will sound")
     }
 
     /// The pre-iOS-26 (and fallback) snooze return: a one-off notification.

@@ -31,6 +31,11 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var onStage3Finished: (() -> Void)?
     private var manifest: UpTimeManifest?
 
+    /// Told after the lock-screen card pauses or plays the morning, so the
+    /// owner can apply the card-pause rule (MorningStarter).
+    var onCardPause: (@MainActor () -> Void)?
+    var onCardResume: (@MainActor () -> Void)?
+
     // MARK: - Init
 
     override init() {
@@ -46,8 +51,9 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     // MARK: - Pause and resume (the lock-screen card)
 
-    /// Quiets the song where it is. The stage's ring limit keeps running,
-    /// so a paused morning ends or snoozes exactly as an unanswered one.
+    /// Quiets the song where it is. What a pause means for the morning is
+    /// the owner's call (onCardPause): in the Invite and the Nudge it is the
+    /// snooze; in the Prize it is only a pause.
     func pause() {
         guard let player, player.isPlaying else { return }
         player.pause()
@@ -57,6 +63,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         isPaused = true
         NowPlayingCard.update(elapsed: elapsedInRegion, playing: false)
         UpTimeLog.audio.notice("[AUDIO] paused from the lock screen")
+        onCardPause?()
     }
 
     /// Picks the song up where it was paused.
@@ -75,6 +82,7 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
         NowPlayingCard.update(elapsed: elapsedInRegion, playing: true)
         UpTimeLog.audio.notice("[AUDIO] resumed from the lock screen")
+        onCardResume?()
     }
 
     private var elapsedInRegion: TimeInterval {

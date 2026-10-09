@@ -1061,6 +1061,14 @@ final class RingDecisionTests: XCTestCase {
         XCTAssertEqual(RingDecision.limitSeconds(forStage: "nudge"), 7 * 60)
         XCTAssertEqual(RingDecision.limitSeconds(forStage: "prize"), 30 * 60)
     }
+
+    /// Founder, 2026-10-09: the card's pause is the snooze in the Invite and
+    /// the Nudge, and only a pause in the Prize.
+    func testCardPauseSnoozesInTheInviteAndTheNudgeOnly() {
+        XCTAssertTrue(RingDecision.cardPauseSnoozes(stage: "invite"))
+        XCTAssertTrue(RingDecision.cardPauseSnoozes(stage: "nudge"))
+        XCTAssertFalse(RingDecision.cardPauseSnoozes(stage: "prize"))
+    }
 }
 
 // MARK: - Review prompt eligibility (§2.6)

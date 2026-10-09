@@ -13,8 +13,57 @@ import Foundation
 @MainActor
 enum MorningStarter {
 
-    static let audio = AudioPlayerManager()
+    static let audio: AudioPlayerManager = {
+        let manager = AudioPlayerManager()
+        manager.onCardPause = { MorningStarter.cardPaused() }
+        manager.onCardResume = { MorningStarter.cardResumed() }
+        return manager
+    }()
     static let stages = StageCoordinator()
+
+    // MARK: - The card's pause is the snooze (founder, 2026-10-09)
+
+    /// A snooze set by the card's pause that has neither returned nor been
+    /// taken back.
+    private static var cardPauseSnoozePending = false
+
+    /// The card paused the morning. In the Invite and the Nudge that is the
+    /// snooze: the return is set now, as a system alarm, so it sounds even
+    /// if iOS puts the paused app to sleep. In the Prize it is only a pause.
+    static func cardPaused() {
+        let stage = StageCoordinator.ruleName(for: stages.currentStage)
+        guard stages.currentSong != nil, RingDecision.cardPauseSnoozes(stage: stage) else {
+            UpTimeLog.alarm.notice("[ALARM] card pause in the \(stage, privacy: .public) — only a pause, no snooze")
+            return
+        }
+        stages.holdRingLimit()
+        engine().snoozeAlarm(stageAtSnooze: stage)
+        cardPauseSnoozePending = true
+        UpTimeLog.alarm.notice("[ALARM] card pause in the \(stage, privacy: .public) — snoozed; play takes it back")
+    }
+
+    /// The card played the morning again before the snooze returned: the
+    /// snooze is taken back and the song carries on.
+    static func cardResumed() {
+        guard cardPauseSnoozePending else { return }
+        cardPauseSnoozePending = false
+        engine().withdrawSnooze()
+        stages.releaseRingLimit()
+        UpTimeLog.alarm.notice("[ALARM] card play — the pause's snooze is taken back")
+    }
+
+    /// The person settled the morning in the app. A Dismiss takes back a
+    /// snooze the card's pause set, so the doorbell never returns to a
+    /// finished morning; a Snooze simply replaces it.
+    static func settleCardPause(dismissed: Bool) {
+        guard cardPauseSnoozePending else { return }
+        cardPauseSnoozePending = false
+        if dismissed { engine().withdrawSnooze() }
+    }
+
+    private static func engine() -> AlarmEngine {
+        AlarmEngine(context: UpTimePrizesApp.sharedContainer.mainContext)
+    }
 
     /// The morning counted by a lock-screen answer, kept for the Prize
     /// screen if the person later opens the app and dismisses.
@@ -32,6 +81,8 @@ enum MorningStarter {
     /// that finished unseen is cleared first, so it can never block the next.
     static func startFromLockScreen() {
         guard !audio.isPlaying else { return }
+        // A snooze the card's pause set has returned and been answered.
+        cardPauseSnoozePending = false
         if stages.currentSong != nil { stages.stopAlarm() }
         let engine = AlarmEngine(context: UpTimePrizesApp.sharedContainer.mainContext)
         guard let song = engine.currentSong(from: audio) else {

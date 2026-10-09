@@ -116,6 +116,7 @@ struct ContentView: View {
                                 prizeSongId = stageCoordinator.currentSong?.id
                                 prizeSongTitle = stageCoordinator.currentSong?.title ?? ""
                                 let stage = stageCoordinator.currentStage
+                                MorningStarter.settleCardPause(dismissed: true)
                                 let outcome = engine.handleAlarmDismissed(
                                     audioSounded: stageCoordinator.audioSounded,
                                     stageAtDismiss: stageName(for: stage),
@@ -134,6 +135,7 @@ struct ContentView: View {
                                 }
                             },
                             onSnooze: {
+                                MorningStarter.settleCardPause(dismissed: false)
                                 engine.snoozeAlarm(stageAtSnooze: stageName(for: stageCoordinator.currentStage))
                                 stageCoordinator.stopAlarm()
                                 // "Rest a little longer." for three seconds, then back to the app.
