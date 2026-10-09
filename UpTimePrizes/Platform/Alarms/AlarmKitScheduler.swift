@@ -173,15 +173,15 @@ enum AlarmKitScheduler {
     /// configuration pairs it with OpenMorningIntent, so Dismiss stops the
     /// ring AND opens the app into the morning.
     private static func makeAttributes() -> AlarmAttributes<UpTimeAlarmMetadata> {
-        // "Dismiss" is the specification's own word; the alert title is the
-        // marked placeholder until the curator rules.
+        // "Dismiss" is the specification's own word; the alert title was
+        // ruled 2026-10-09.
         let stopButton = AlarmButton(
             text: "Dismiss",
             textColor: .white,
             systemImageName: "stop.circle"
         )
         let alert = AlarmPresentation.Alert(
-            title: LocalizedStringResource(stringLiteral: CuratorCopy.placeholderAlarmNotificationTitle),
+            title: LocalizedStringResource(stringLiteral: CuratorCopy.alarmAlertTitle),
             stopButton: stopButton
         )
         return AlarmAttributes<UpTimeAlarmMetadata>(

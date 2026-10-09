@@ -26,10 +26,10 @@
         "com.uptime.prizes.signature"
       ],
       "price": "$2.99",
-      "description": "What makes a Signature Journey different from a full Journey is the curation — each song edited and orchestrated specifically for the three-stage experience. The depth of attention here is that of a featured release.\nMore Signature Journeys are coming.",
+      "description": "The whole of the UpTime Sound, gathered small — the old halls of the 1930s and 40s carried into a modern groove, close to the ear.",
       "sortOrder": 1,
       "packName": "signature",
-      "framingLine": "Eight songs from our Signature Series.",
+      "framingLine": "Eight songs, and the door into everything else.",
       "entitlementId": ""
     },
     {
@@ -52,7 +52,7 @@
       "totalDays": 9,
       "productId": "com.uptime.prizes.signature.daybreak_shuffle",
       "price": "$4.99",
-      "description": "Big Band Swing, Boogie Woogie, and Gypsy Jazz from the 1930s and 40s, built for a morning that is already moving.",
+      "description": "Drawing on Big Band Swing, Boogie Woogie and Gypsy Jazz, built for a morning that is already moving.",
       "sortOrder": 3,
       "packName": "daybreak_shuffle",
       "framingLine": "Eight songs for mornings with somewhere to be.",
@@ -93,12 +93,12 @@
       "category": "overture",
       "totalDays": 49,
       "productId": "journey_overture",
-      "price": "$9.99",
+      "price": "$11.99",
       "packName": "overture",
       "entitlementId": "",
       "sortOrder": 6,
-      "framingLine": "",
-      "description": "Forty-eight original songs, one each morning, across forty-nine mornings. The longest work in the catalog."
+      "framingLine": "Forty-eight songs for every kind of morning.",
+      "description": "The longest run in the catalog. The power of 1930s and 40s big band, reborn bold and modern, and carried out to every corner of the UpTime Sound."
     }
   ],
   "songs": [

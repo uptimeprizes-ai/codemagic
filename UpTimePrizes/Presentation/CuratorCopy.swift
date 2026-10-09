@@ -3,10 +3,10 @@ import Foundation
 // MARK: - CuratorCopy
 //
 // Every user-facing string the curator has ruled, verbatim (handoff §2.9).
-// Nothing here may be edited without a new curator ruling. Strings marked
-// [COPY PENDING] have no ruling yet and must not survive into a public
-// release; they are deliberately visible so un-ruled words are never
-// mistaken for approved copy.
+// Nothing here may be edited without a new curator ruling. As of the
+// 2026-10-09 ruling no un-ruled string remains. If one is ever added again
+// it must carry the pending marker, because a marked string is the only
+// thing that stops un-ruled words being mistaken for approved copy.
 //
 // Standing rules: "sounded", never "rang"; never "failed" or "error" in a
 // download or playback state; the Prize screen says only what is now true.
@@ -28,10 +28,16 @@ enum CuratorCopy {
     /// Curator, 2026-09-23 — a morning nobody answered leads the message,
     /// before anything else, and where the line underneath carries a fact of
     /// its own the two STACK (unheard line first) rather than one replacing
-    /// the other. Wired in the missed-morning pass; the words land now so no
-    /// one ever writes their own.
+    /// the other.
+    ///
+    /// Reworded 2026-10-09. The original second clause read "The morning
+    /// still counts." Founder ruling 2026-09-25 made that false. That ruling
+    /// retired its twin in missedAlarmSoundedBody but missed this one, which
+    /// has five callers and ships. The replacement states the same
+    /// reassurance truthfully, and repeats the wording of neither line it
+    /// stacks above.
     static let prizeMessageUnheard =
-        "That one played without you. The morning still counts."
+        "That one played without you. Nothing was lost."
 
     // MARK: Claim (§2.8) — used by the gift path when it lands
 
@@ -44,7 +50,7 @@ enum CuratorCopy {
     static let missedAlarmTitle = "Missed alarm"
     /// Ruled 2026-09-17 but NO LONGER TRUE: founder ruling 2026-09-25 -
     /// an unanswered alarm does not count. Kept only as the record of the
-    /// retired line; never shown. See placeholderMissedAlarmSoundedBody.
+    /// retired line; never shown. See missedAlarmSoundedUnansweredBody.
     static let missedAlarmSoundedBody = "The alarm sounded. The morning counts."
     static let missedAlarmSilentBody = "The alarm did not sound. Your phone may have blocked it."
 
@@ -72,10 +78,22 @@ enum CuratorCopy {
         "\(journeyTitle) is yours. Arriving now."
     }
 
-    // MARK: Un-ruled — placeholders awaiting the curator
+    // MARK: Alarm surfaces — ruled 2026-10-09
 
-    static let placeholderAlarmNotificationTitle = "[COPY PENDING] Alarm"
-    static let placeholderAlarmNotificationBody = "[COPY PENDING] Open UpTime Prizes to begin the morning."
-    /// "Sounded, nobody answered, not counted" - the curator's line is owed.
-    static let placeholderMissedAlarmSoundedBody = "[COPY PENDING] The alarm sounded. No one answered."
+    /// The AlarmKit alert title, shown full-screen beside "Dismiss" at wake
+    /// time. At that moment the screen's whole job is to identify itself, so
+    /// it carries the name and nothing clever. The voice belongs on the
+    /// Prize screen, which the user reaches awake.
+    static let alarmAlertTitle = "UpTime Prizes"
+
+    /// Body of the local alarm notification.
+    static let alarmNotificationBody = "Your morning is ready."
+
+    /// Sounded, nobody answered, and by founder ruling 2026-09-25 the
+    /// morning does not count — so the line says the alarm sounded (never
+    /// "rang") and then says what the user actually wants to know: that
+    /// nothing moved. Second clause is the ruled wording of
+    /// prizeMessageCatalystOrFallback, deliberately.
+    static let missedAlarmSoundedUnansweredBody =
+        "The alarm sounded without you. Your journey is exactly where you left it."
 }

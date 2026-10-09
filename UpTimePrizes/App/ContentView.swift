@@ -217,14 +217,14 @@ struct ContentView: View {
             await setup()
         }
         // A missed morning is reported once, in the app (§2.3). It never
-        // counts (founder ruling 2026-09-25). "Did not sound" is the
-        // curator's ruled line; "sounded, unanswered" awaits new copy,
-        // because the ruled line ("The morning counts.") is no longer true.
+        // counts (founder ruling 2026-09-25). Both lines are ruled now: the
+        // 2026-09-17 "The morning counts." is retired, and the 2026-10-09
+        // replacement states the ruling truthfully.
         .alert(CuratorCopy.missedAlarmTitle, isPresented: $showMissedAlarm) {
             Button(CuratorCopy.prizeContinue, role: .cancel) {}
         } message: {
             Text(missedSounded
-                 ? CuratorCopy.placeholderMissedAlarmSoundedBody
+                 ? CuratorCopy.missedAlarmSoundedUnansweredBody
                  : CuratorCopy.missedAlarmSilentBody)
         }
     }

@@ -18,10 +18,10 @@ class AlarmEngine: ObservableObject {
     static let alarmNotificationIdentifier = "com.uptimeprizes.alarm.morning"
     static let alarmFiredNotificationName = Notification.Name("UpTimePrizesAlarmFired")
 
-    // The curator has not ruled copy for the alarm notification; the marked
-    // placeholders live in CuratorCopy with everything else user-facing.
-    static let placeholderAlarmTitle = CuratorCopy.placeholderAlarmNotificationTitle
-    static let placeholderAlarmBody = CuratorCopy.placeholderAlarmNotificationBody
+    // Ruled 2026-10-09. The strings live in CuratorCopy with everything
+    // else user-facing; these are the alarm notification's two.
+    static let alarmTitle = CuratorCopy.alarmAlertTitle
+    static let alarmBody = CuratorCopy.alarmNotificationBody
 
     // MARK: - Published state
 
@@ -103,8 +103,8 @@ class AlarmEngine: ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: allAlarmIdentifiers())
 
         let content = UNMutableNotificationContent()
-        content.title = Self.placeholderAlarmTitle
-        content.body = Self.placeholderAlarmBody
+        content.title = Self.alarmTitle
+        content.body = Self.alarmBody
         content.sound = UNNotificationSound.default
         content.userInfo = ["type": "alarm"]
 
@@ -506,8 +506,8 @@ extension AlarmEngine {
     private func scheduleSnoozeNotification(minutes: Int) {
         let center = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
-        content.title = Self.placeholderAlarmTitle
-        content.body = Self.placeholderAlarmBody
+        content.title = Self.alarmTitle
+        content.body = Self.alarmBody
         content.sound = UNNotificationSound.default
         content.userInfo = ["type": "alarm"]
 

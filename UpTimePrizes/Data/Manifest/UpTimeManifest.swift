@@ -22,7 +22,11 @@ struct ManifestJourney: Codable {
     /// convention (manifest v3.0). A purchase made under a retired id must
     /// still restore — the delivery pass consumes this.
     let legacyProductIds: [String]?
-    let price: String
+    /// No price is stored in the app. Removed 2026-10-09: the field was
+    /// decoded and never read, and the one figure it held ($9.99) had been
+    /// stale since the 1 Oct ruling put The Overture at $11.99. Every price
+    /// the user sees comes from the App Store (Product.displayPrice).
+    /// Android's file still carries a "price" key; decoding ignores it.
     let description: String
     let sortOrder: Int
     let packName: String

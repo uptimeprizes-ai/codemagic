@@ -164,18 +164,23 @@ final class BundledManifestTests: XCTestCase {
         XCTAssertEqual(placeholderCount, 0, "Found placeholder regions — real measurements required")
     }
 
-    /// The manifest is Android's, byte for byte (App Builder, 2026-09-26:
-    /// supersedes 90a330dc…). A hand edit on iOS fails here.
+    /// The manifest is Android's, byte for byte: the file committed in the
+    /// Android repo at 9ef7637 (App Builder, 2026-10-02, build 65), which
+    /// supersedes 7068db70… and carries the 1-2 Oct rulings (The Overture's
+    /// framing line and $11.99, The Cast Prelude's card, Daybreak's "drawing
+    /// on"). A hand edit on iOS fails here.
     func testBundledManifestIsAndroidsExactFile() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "uptime_full_manifest", withExtension: "json"))
         let data = try Data(contentsOf: url)
-        XCTAssertEqual(data.count, 54_021)
+        XCTAssertEqual(data.count, 53_977)
         let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
-        XCTAssertEqual(digest, "7068db701f4036ddd9ebd33d55ecd07931db80b25a7c211efe1570a6bb83bac4",
+        XCTAssertEqual(digest, "130169211c992e94708c932e2e4cc8511695ff7212589ad645ae98d7a1d2537e",
                        "uptime_full_manifest.json is not the App Builder's current file")
         let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
+        XCTAssertEqual(manifest.journey(withId: "overture")?.framingLine,
+                       "Forty-eight songs for every kind of morning.")
         XCTAssertEqual(manifest.journey(withId: "overture")?.description,
-                       "Forty-eight original songs, one each morning, across forty-nine mornings. The longest work in the catalog.")
+                       "The longest run in the catalog. The power of 1930s and 40s big band, reborn bold and modern, and carried out to every corner of the UpTime Sound.")
     }
 }
 
