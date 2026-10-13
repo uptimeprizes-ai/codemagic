@@ -79,6 +79,48 @@ targets:
         UIAppFonts:
           - PlayfairDisplay-Regular.ttf
           - PlayfairDisplay-SemiBold.ttf
+        # Apple-Hosted Background Assets (the paid journeys' music). Apple's
+        # guide: these three keys, and no other Background Assets key.
+        BAAppGroupID: group.com.uptimeprizes.app
+        BAHasManagedAssetPacks: true
+        BAUsesAppleHosting: true
+    # The App Group the downloader shares with the app (registered by the
+    # founder in the Developer portal, 13 Oct 2026).
+    entitlements:
+      path: UpTimePrizes/UpTimePrizes.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.uptimeprizes.app
+    dependencies:
+      # Embedded in the app's Extensions folder (an ExtensionKit extension).
+      - target: UpTimeAssetDownloader
+
+  # The downloader iOS runs to fetch Apple-hosted asset packs (iOS 26+).
+  UpTimeAssetDownloader:
+    type: extensionkit-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: UpTimeAssetDownloader
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.uptimeprizes.app.assetdownloader
+        INFOPLIST_KEY_CFBundleDisplayName: "UpTime Prizes Downloader"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+    info:
+      path: UpTimeAssetDownloader/Info.plist
+      properties:
+        EXAppExtensionAttributes:
+          EXExtensionPointIdentifier: com.apple.background-asset-downloader-extension
+    entitlements:
+      path: UpTimeAssetDownloader/UpTimeAssetDownloader.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.uptimeprizes.app
 
   UpTimePrizesTests:
     type: bundle.unit-test
