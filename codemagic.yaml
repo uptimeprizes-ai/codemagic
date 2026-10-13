@@ -89,6 +89,10 @@ workflows:
     environment:
       groups:
         - ios_audio_repo
+        # App Store Connect API key for uploading the packs (founder-entered,
+        # Secret): ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY, plus the app's
+        # numeric Apple ID as APP_APPLE_ID.
+        - ios_asc_upload
       xcode: latest
     scripts:
       - name: Fetch the paid music (private repository, read-only key)
@@ -127,5 +131,27 @@ workflows:
             echo "[PACKS] $j: $(ls "$j"/*.m4a | wc -l | tr -d ' ') songs -> $(du -h "$CM_BUILD_DIR/packs/$j.aar" | cut -f1)"
           done
           ls -la "$CM_BUILD_DIR/packs"
+      - name: Upload the packs to App Store Connect
+        script: |
+          set -euo pipefail
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_PRIVATE_KEY APP_APPLE_ID; do
+            if [ -z "${!v:-}" ]; then
+              echo "[PACKS] NOT UPLOADED: $v is missing from the ios_asc_upload group"
+              exit 1
+            fi
+          done
+          KEYDIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEYDIR"
+          # Strip Windows line endings a pasted key may carry. Never printed.
+          printf '%s\n' "$ASC_PRIVATE_KEY" | tr -d '\r' > "$KEYDIR/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$KEYDIR/AuthKey_${ASC_KEY_ID}.p8"
+          trap 'rm -f "$KEYDIR/AuthKey_${ASC_KEY_ID}.p8"' EXIT
+          for j in cast-prelude warm-front daybreak-shuffle catalyst educator overture; do
+            echo "[PACKS] uploading $j ($(du -h "$CM_BUILD_DIR/packs/$j.aar" | cut -f1))"
+            xcrun altool --upload-asset-pack "$CM_BUILD_DIR/packs/$j.aar" \
+              --apple-id "$APP_APPLE_ID" \
+              --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+            echo "[PACKS] $j: accepted for processing — Apple emails when it is ready"
+          done
     artifacts:
       - packs/*.aar
