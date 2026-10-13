@@ -12,9 +12,10 @@ import SwiftData
 // retired one (`legacyProductIds`), while the store is only ever ASKED for
 // current ids — a withdrawn product can never reappear in the storefront.
 //
-// NOTE: the manifest carries Android's Play product ids. App Store Connect is
-// its own namespace; which ids exist there is the founder's open ruling.
-// Until then no product resolves on iOS — and the log says so, every launch.
+// The manifest carries the product ids for both stores: App Store Connect
+// uses the same ids as Play. The Overture is journey_overture_lp on both,
+// because Apple never reissues a deleted id (App Builder, 2026-10-10). The
+// log reports how many the App Store returns, every launch.
 
 struct StoreCatalog: Equatable {
     /// Current product id → journeyId. The only ids the store is asked for.

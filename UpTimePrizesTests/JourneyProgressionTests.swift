@@ -155,6 +155,7 @@ final class BundledManifestTests: XCTestCase {
         // Retired store ids ride along so old purchases can still restore.
         XCTAssertEqual(manifest.journey(withId: "cast-prelude")?.legacyProductIds, ["com.uptime.prizes.signature"])
         XCTAssertEqual(manifest.journey(withId: "catalyst")?.legacyProductIds, ["com.uptime.prizes.special_day"])
+        XCTAssertEqual(manifest.journey(withId: "overture")?.legacyProductIds, ["journey_overture"])
         // The placeholder pattern from the June build (0/30000/60000 for every
         // song) must never come back: regions are per-song measurements.
         let placeholderCount = manifest.songs.filter {
@@ -165,16 +166,15 @@ final class BundledManifestTests: XCTestCase {
     }
 
     /// The manifest is Android's, byte for byte: the file committed in the
-    /// Android repo at 9ef7637 (App Builder, 2026-10-02, build 65), which
-    /// supersedes 7068db70… and carries the 1-2 Oct rulings (The Overture's
-    /// framing line and $11.99, The Cast Prelude's card, Daybreak's "drawing
-    /// on"). A hand edit on iOS fails here.
+    /// Android repo at 5f65bb5 (App Builder, 2026-10-10), which supersedes
+    /// 13016921… by moving The Overture to journey_overture_lp, the old id
+    /// kept for restore. A hand edit on iOS fails here.
     func testBundledManifestIsAndroidsExactFile() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "uptime_full_manifest", withExtension: "json"))
         let data = try Data(contentsOf: url)
-        XCTAssertEqual(data.count, 53_977)
+        XCTAssertEqual(data.count, 54_028)
         let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
-        XCTAssertEqual(digest, "130169211c992e94708c932e2e4cc8511695ff7212589ad645ae98d7a1d2537e",
+        XCTAssertEqual(digest, "dd81940140ddfb11a77f6205b3ce32406938e1f8fd75f735f7b1fd07aeac80d3",
                        "uptime_full_manifest.json is not the App Builder's current file")
         let manifest = try XCTUnwrap(UpTimeManifest.loadFromBundle())
         XCTAssertEqual(manifest.journey(withId: "overture")?.framingLine,
@@ -1011,8 +1011,13 @@ final class StorefrontTests: XCTestCase {
         let catalog = StoreCatalog(journeys: manifest.journeys)
         XCTAssertEqual(catalog.queryIds, [
             "com.uptime.prizes.signature.daybreak_shuffle", "com.uptime.prizes.signature.warm_front",
-            "journey_cast_prelude", "journey_catalyst", "journey_overture"
+            "journey_cast_prelude", "journey_catalyst", "journey_overture_lp"
         ])
+        // Apple never reissues a deleted product id, so The Overture moved to
+        // journey_overture_lp on both platforms (App Builder, 2026-10-10). The
+        // old id is never asked for, but still restores.
+        XCTAssertFalse(catalog.queryIds.contains("journey_overture"))
+        XCTAssertEqual(catalog.journeyId(forOwnedProductId: "journey_overture"), "overture")
         XCTAssertFalse(catalog.queryIds.contains("com.uptime.prizes.signature"))
         XCTAssertFalse(catalog.queryIds.contains("com.uptime.prizes.special_day"))
         XCTAssertEqual(catalog.journeyId(forOwnedProductId: "journey_cast_prelude"), "cast-prelude")
@@ -1022,7 +1027,7 @@ final class StorefrontTests: XCTestCase {
         // Genesis and The Teacher are never sold.
         XCTAssertNil(catalog.currentProductId(forJourneyId: "genesis"))
         XCTAssertNil(catalog.currentProductId(forJourneyId: "educator"))
-        XCTAssertEqual(catalog.currentProductId(forJourneyId: "overture"), "journey_overture")
+        XCTAssertEqual(catalog.currentProductId(forJourneyId: "overture"), "journey_overture_lp")
     }
 
     func testNoStoreProductsMeansNothingQuotedOrBuyable() {
