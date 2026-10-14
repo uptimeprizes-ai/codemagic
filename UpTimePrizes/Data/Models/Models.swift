@@ -62,10 +62,11 @@ final class SongEntity {
     }
 }
 
-/// One row per counted morning. A morning exists here only if audio actually
-/// sounded — nothing played, nothing recorded. dayKey is unique, so a second
-/// alarm on the same calendar day can never count twice, and the Android bug
-/// of one session recording a morning twice cannot recur at the store level.
+/// One row per counted calendar day — the streak's record. A morning exists
+/// here only if audio actually sounded — nothing played, nothing recorded.
+/// dayKey is unique, so the streak counts a calendar day once whatever
+/// sounded. Which JOURNEY may count is decided per journey, by
+/// JourneyMorningEntity (founder ruling, 11 Oct 2026).
 @Model
 final class MorningRecordEntity {
     @Attribute(.unique) var dayKey: String // device-local "yyyy-MM-dd"
@@ -82,6 +83,29 @@ final class MorningRecordEntity {
         self.stageAtDismiss = stageAtDismiss
         self.reachedPrize = reachedPrize
         self.heldStreakOnly = heldStreakOnly
+        self.advancedJourney = advancedJourney
+        self.recordedAt = recordedAt
+    }
+}
+
+/// One row per journey per calendar day it counted a morning. Founder ruling,
+/// 11 Oct 2026: a morning belongs to a journey, not to the calendar — each
+/// journey counts at most once a day, so nobody finishes a journey faster
+/// than its mornings, but two different journeys may each count on the same
+/// day. `key` ("<dayKey>|<journeyId>") is unique, so one session or one
+/// journey can never count twice at the store level.
+@Model
+final class JourneyMorningEntity {
+    @Attribute(.unique) var key: String
+    var dayKey: String
+    var journeyId: String
+    var advancedJourney: Bool
+    var recordedAt: Date
+
+    init(dayKey: String, journeyId: String, advancedJourney: Bool, recordedAt: Date = Date()) {
+        self.key = "\(dayKey)|\(journeyId)"
+        self.dayKey = dayKey
+        self.journeyId = journeyId
         self.advancedJourney = advancedJourney
         self.recordedAt = recordedAt
     }

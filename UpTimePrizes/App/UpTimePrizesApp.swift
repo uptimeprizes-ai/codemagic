@@ -28,6 +28,7 @@ struct UpTimePrizesApp: App {
             DemoStateEntity.self,
             AlarmEntity.self,
             MorningRecordEntity.self,
+            JourneyMorningEntity.self,
             StarredSongEntity.self
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

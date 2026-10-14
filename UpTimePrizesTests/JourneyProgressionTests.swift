@@ -265,7 +265,7 @@ final class JourneyProgressionTests: XCTestCase {
     private var testDay = Date(timeIntervalSince1970: 1_700_000_000)
 
     override func setUpWithError() throws {
-        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self, JourneyMorningEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         container = try ModelContainer(for: schema, configurations: [config])
         context = ModelContext(container)
@@ -448,6 +448,39 @@ final class JourneyProgressionTests: XCTestCase {
         XCTAssertEqual(genesis?.completedDays, 1)
     }
 
+    /// Founder ruling, 11 Oct 2026: a morning belongs to a journey, not to the
+    /// calendar. Two journeys may each count on one day; neither twice.
+    func testASecondJourneyCountsTheSameDayButNoJourneyCountsTwice() throws {
+        let day = testDay
+        alarmEngine.beginAlarmSession()
+        XCTAssertNotNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day
+        ))
+        for j in try context.fetch(FetchDescriptor<JourneyEntity>()) {
+            j.isActive = j.id == "cast-prelude"
+            if j.id == "cast-prelude" { j.purchaseState = "ACTIVE_IN_PROGRESS" }
+        }
+        try context.save()
+
+        alarmEngine.beginAlarmSession()
+        let second = try XCTUnwrap(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day
+        ), "The Cast Prelude's first morning counts on a day The Genesis already counted")
+        XCTAssertEqual(second.journeyTitle, "The Cast Prelude")
+        XCTAssertEqual(second.morningNumber, 1)
+
+        alarmEngine.beginAlarmSession()
+        XCTAssertNil(alarmEngine.handleAlarmDismissed(
+            audioSounded: true, stageAtDismiss: "prize", reachedPrize: true, date: day
+        ), "The Cast Prelude never counts twice in a day")
+
+        let counts = Dictionary(uniqueKeysWithValues:
+            try context.fetch(FetchDescriptor<JourneyEntity>()).map { ($0.id, $0.completedDays) })
+        XCTAssertEqual(counts["genesis"], 1)
+        XCTAssertEqual(counts["cast-prelude"], 1)
+        XCTAssertEqual(MorningLedger(context: context).streak(asOf: day), 1)
+    }
+
     func testOneRecordedMorningPerAlarmSession() throws {
         alarmEngine.beginAlarmSession()
         let day2 = Calendar.current.date(byAdding: .day, value: 1, to: testDay)!
@@ -535,7 +568,7 @@ final class SnoozeRulesTests: XCTestCase {
     var engine: AlarmEngine!
 
     override func setUpWithError() throws {
-        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self, JourneyMorningEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         container = try ModelContainer(for: schema, configurations: [config])
         context = ModelContext(container)
@@ -615,7 +648,7 @@ final class StreakTests: XCTestCase {
     }
 
     override func setUpWithError() throws {
-        let schema = Schema([MorningRecordEntity.self])
+        let schema = Schema([MorningRecordEntity.self, JourneyMorningEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         container = try ModelContainer(for: schema, configurations: [config])
         context = ModelContext(container)
@@ -662,6 +695,45 @@ final class StreakTests: XCTestCase {
         // Walk back from day 3: counted day 3 (1), catalyst day 2 (holds),
         // day 1 empty → stop. The day-0 morning is beyond the break.
         XCTAssertEqual(ledger.streak(asOf: day(3)), 1)
+    }
+
+    // MARK: A morning belongs to a journey (founder ruling, 11 Oct 2026)
+
+    @discardableResult
+    private func record(_ offset: Int, _ journeyId: String, catalyst: Bool = false) -> Bool {
+        ledger.record(
+            date: day(offset), journeyId: journeyId,
+            stageAtDismiss: "prize", reachedPrize: true,
+            heldStreakOnly: catalyst, advancedJourney: !catalyst
+        )
+    }
+
+    func testTwoJourneysCountTheSameDayAndTheStreakCountsTheDayOnce() {
+        XCTAssertTrue(record(0, "genesis"))
+        XCTAssertTrue(record(0, "warm-front"), "A second journey counts on the same day")
+        XCTAssertFalse(record(0, "warm-front"), "The same journey never counts twice in a day")
+        XCTAssertFalse(record(0, "genesis"))
+        XCTAssertEqual(ledger.streak(asOf: day(0)), 1, "The streak counts the calendar day once")
+        XCTAssertTrue(ledger.hasJourneyMorning(dayKey: MorningLedger.dayKey(for: day(0)), journeyId: "warm-front"))
+    }
+
+    func testACatalystDayBecomesAFullDayWhenAJourneyCountsToo() {
+        count(0)
+        XCTAssertTrue(record(1, "catalyst", catalyst: true))
+        XCTAssertTrue(record(1, "genesis"))
+        XCTAssertEqual(ledger.streak(asOf: day(1)), 2)
+    }
+
+    func testAMorningCountedBeforeThePerJourneyRecordStillBlocksItsJourney() {
+        // A day written before JourneyMorningEntity existed has no per-journey row.
+        context.insert(MorningRecordEntity(
+            dayKey: MorningLedger.dayKey(for: day(0)), journeyId: "warm-front",
+            stageAtDismiss: "invite", reachedPrize: false, heldStreakOnly: false, advancedJourney: true
+        ))
+        try? context.save()
+        XCTAssertFalse(record(0, "warm-front"))
+        XCTAssertTrue(record(0, "genesis"))
+        XCTAssertEqual(ledger.streak(asOf: day(0)), 1)
     }
 }
 
@@ -952,7 +1024,7 @@ final class UnansweredNeverCountsTests: XCTestCase {
     /// The in-app Option B stop ends the session without recording anything:
     /// no journey progress, no streak (founder ruling 2026-09-25).
     func testEndingAnUnansweredSessionRecordsNoMorning() throws {
-        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self])
+        let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self, MorningRecordEntity.self, JourneyMorningEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [config])
         let context = ModelContext(container)
@@ -1163,7 +1235,7 @@ final class ProgressBackupTests: XCTestCase {
 
     private func container() throws -> ModelContext {
         let schema = Schema([JourneyEntity.self, SongEntity.self, DemoStateEntity.self, AlarmEntity.self,
-                             MorningRecordEntity.self, StarredSongEntity.self])
+                             MorningRecordEntity.self, JourneyMorningEntity.self, StarredSongEntity.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return ModelContext(try ModelContainer(for: schema, configurations: [config]))
     }

@@ -294,7 +294,8 @@ class AlarmEngine: ObservableObject {
     ///
     /// The rules (§2.4):
     /// - counts only if audio actually sounded;
-    /// - one morning per calendar day (ledger-enforced);
+    /// - one morning per journey per calendar day (ledger-enforced; founder
+    ///   ruling 11 Oct 2026 — two journeys may each count on the same day);
     /// - one recorded morning per alarm session (session latch);
     /// - a Catalyst morning holds the streak and advances no journey;
     /// - the morning index keeps moving after completion, wrapping at lookup.
@@ -330,7 +331,7 @@ class AlarmEngine: ObservableObject {
             advancedJourney: !isCatalyst
         )
         guard counted else {
-            UpTimeLog.counting.notice("[MORNING] not counted — this calendar day already has its morning")
+            UpTimeLog.counting.notice("[MORNING] not counted — \(active.id, privacy: .public) already has today's morning")
             return nil
         }
 
@@ -383,13 +384,9 @@ class AlarmEngine: ObservableObject {
               let active = journeys.first(where: { $0.isActive }) else {
             return nil
         }
-        let journeyId = active.id
-        let dayKey = MorningLedger.dayKey(for: now)
-        var fetch = FetchDescriptor<MorningRecordEntity>(
-            predicate: #Predicate { $0.dayKey == dayKey && $0.journeyId == journeyId && $0.advancedJourney == true }
+        let advancedToday = MorningLedger(context: context).hasJourneyMorning(
+            dayKey: MorningLedger.dayKey(for: now), journeyId: active.id, advancedOnly: true
         )
-        fetch.fetchLimit = 1
-        let advancedToday = ((try? context.fetchCount(fetch)) ?? 0) > 0
         let song = audioManager.song(
             forJourneyId: active.id,
             morning: Self.morningToPlay(currentDay: active.currentDay, advancedToday: advancedToday)

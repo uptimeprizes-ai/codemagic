@@ -5,7 +5,9 @@ import SwiftData
 //
 // The single place that decides what counts as a morning (handoff §2.4):
 // - A morning counts only if audio actually sounded.
-// - One morning per calendar day; extra alarms never count twice.
+// - One morning per JOURNEY per calendar day (founder ruling, 11 Oct 2026):
+//   extra alarms never count a journey twice, but two different journeys
+//   may each count on the same day. The streak counts the day once.
 // - A Catalyst morning holds the streak rather than extending or breaking it.
 // - The streak is consecutive counted mornings, shows 0 the moment it is
 //   broken (a live run means the last counted day was today or yesterday),
@@ -33,8 +35,43 @@ struct MorningLedger {
         return ((try? context.fetchCount(fetch)) ?? 0) > 0
     }
 
+    /// Whether this journey already counted a morning on this day. Mornings
+    /// counted before the per-journey record existed live only in the day's
+    /// MorningRecordEntity, so both are read.
+    func hasJourneyMorning(dayKey: String, journeyId: String, advancedOnly: Bool = false) -> Bool {
+        let mineAny = #Predicate<JourneyMorningEntity> {
+            $0.dayKey == dayKey && $0.journeyId == journeyId
+        }
+        let mineAdvanced = #Predicate<JourneyMorningEntity> {
+            $0.dayKey == dayKey && $0.journeyId == journeyId && $0.advancedJourney == true
+        }
+        var mine = FetchDescriptor<JourneyMorningEntity>(predicate: advancedOnly ? mineAdvanced : mineAny)
+        mine.fetchLimit = 1
+        if ((try? context.fetchCount(mine)) ?? 0) > 0 { return true }
+
+        let dayAny = #Predicate<MorningRecordEntity> {
+            $0.dayKey == dayKey && $0.journeyId == journeyId
+        }
+        let dayAdvanced = #Predicate<MorningRecordEntity> {
+            $0.dayKey == dayKey && $0.journeyId == journeyId && $0.advancedJourney == true
+        }
+        var day = FetchDescriptor<MorningRecordEntity>(predicate: advancedOnly ? dayAdvanced : dayAny)
+        day.fetchLimit = 1
+        return ((try? context.fetchCount(day)) ?? 0) > 0
+    }
+
+    private func dayRecord(dayKey: String) -> MorningRecordEntity? {
+        var fetch = FetchDescriptor<MorningRecordEntity>(
+            predicate: #Predicate { $0.dayKey == dayKey }
+        )
+        fetch.fetchLimit = 1
+        return try? context.fetch(fetch).first
+    }
+
     /// Records a counted morning. Returns false (and records nothing) if this
-    /// calendar day already has a morning — never two on one day.
+    /// JOURNEY already counted today. A second journey on the same day counts
+    /// for its journey; the day's streak record is written once, and a day
+    /// first held by a Catalyst morning becomes a full day.
     @discardableResult
     func record(
         date: Date = Date(),
@@ -45,16 +82,23 @@ struct MorningLedger {
         advancedJourney: Bool
     ) -> Bool {
         let key = Self.dayKey(for: date)
-        guard !hasRecord(dayKey: key) else { return false }
-        context.insert(MorningRecordEntity(
-            dayKey: key,
-            journeyId: journeyId,
-            stageAtDismiss: stageAtDismiss,
-            reachedPrize: reachedPrize,
-            heldStreakOnly: heldStreakOnly,
-            advancedJourney: advancedJourney,
-            recordedAt: date
+        guard !hasJourneyMorning(dayKey: key, journeyId: journeyId) else { return false }
+        context.insert(JourneyMorningEntity(
+            dayKey: key, journeyId: journeyId, advancedJourney: advancedJourney, recordedAt: date
         ))
+        if let day = dayRecord(dayKey: key) {
+            if day.heldStreakOnly && !heldStreakOnly { day.heldStreakOnly = false }
+        } else {
+            context.insert(MorningRecordEntity(
+                dayKey: key,
+                journeyId: journeyId,
+                stageAtDismiss: stageAtDismiss,
+                reachedPrize: reachedPrize,
+                heldStreakOnly: heldStreakOnly,
+                advancedJourney: advancedJourney,
+                recordedAt: date
+            ))
+        }
         try? context.save()
         return true
     }
