@@ -12,7 +12,9 @@ workflows:
       vars:
         XCODE_WORKSPACE: "UpTimePrizes.xcodeproj/project.xcworkspace"
         XCODE_SCHEME: "UpTimePrizes"
-        APP_STORE_APPLE_ID: "com.uptimeprizes.app"
+        # The app's numeric Apple ID in App Store Connect (read by the founder,
+        # 13 Oct 2026). Not read by any step today; kept correct for the next.
+        APP_STORE_APPLE_ID: "6785680164"
       xcode: latest
     scripts:
       - name: Install XcodeGen
